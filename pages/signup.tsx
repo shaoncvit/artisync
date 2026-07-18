@@ -77,10 +77,10 @@ export default function SignupPage() {
       {/* Header with Logo */}
       <header className="relative z-10 p-4">
         <div className="flex items-center">
-          <img 
-            src="/logo_2.png" 
-            alt="ArtInYou Logo" 
-            className="h-32 w-32 object-contain"
+          <img
+            src="/logo_2.png"
+            alt="Artisync Logo"
+            className="h-16 w-auto object-contain"
           />
         </div>
       </header>

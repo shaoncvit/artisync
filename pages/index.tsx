@@ -23,10 +23,10 @@ const Home: NextPage = () => {
       {/* Header with Logo */}
       <header className="relative z-10 p-4">
         <div className="flex items-center">
-          <img 
-            src="/logo.png" 
-            alt="ArtInYou Logo" 
-            className="h-32 w-32 object-contain"
+          <img
+            src="/logo.png"
+            alt="Artisync Logo"
+            className="h-16 w-auto object-contain"
           />
         </div>
       </header>
