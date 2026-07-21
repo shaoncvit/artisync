@@ -1,21 +1,138 @@
 @import "tailwindcss";
 
+/* ─── Design tokens ─────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brand colours */
+  --color-primary: #141a33;        /* deep navy/indigo */
+  --color-primary-hover: #1e2547;
+  --color-primary-soft: #e8e9f2;
+
+  --color-accent: #f3703a;         /* coral/warm orange, from the logo */
+  --color-accent-hover: #e0592a;
+  --color-accent-soft: #fdece2;
+
+  --color-secondary: #7c6fd6;      /* soft violet */
+  --color-secondary-soft: #ece9fb;
+
+  /* Surfaces */
+  --color-page: #faf7f2;           /* warm off-white */
+  --color-surface: #ffffff;
+  --color-border: #e7e2d9;
+
+  /* Text */
+  --color-text: #161821;           /* near-black / deep navy */
+  --color-text-secondary: #6b6f7d; /* neutral grey */
+  --color-text-on-dark: #ffffff;
+  --color-text-on-dark-soft: rgba(255, 255, 255, 0.72);
+
+  /* Semantic */
+  --color-success: #1c8a53;
+  --color-success-soft: #e5f5ec;
+  --color-warning: #b7791f;
+  --color-warning-soft: #fbf0dd;
+  --color-error: #d1403a;
+  --color-error-soft: #fbe7e6;
+
+  /* Shape & elevation */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.25rem;
+  --radius-full: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(20, 26, 51, 0.06);
+  --shadow-md: 0 8px 24px rgba(20, 26, 51, 0.10);
+  --shadow-lg: 0 20px 48px rgba(20, 26, 51, 0.16);
+
+  --container-max: 1400px;
+
+  /* Legacy aliases kept for anything still referencing them */
+  --background: var(--color-page);
+  --foreground: var(--color-text);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--color-page);
+  --color-foreground: var(--color-text);
+
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-soft: var(--color-primary-soft);
+  --color-accent: var(--color-accent);
+  --color-accent-hover: var(--color-accent-hover);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-secondary: var(--color-secondary);
+  --color-secondary-soft: var(--color-secondary-soft);
+
+  --color-page: var(--color-page);
+  --color-surface: var(--color-surface);
+  --color-border: var(--color-border);
+
+  --color-text: var(--color-text);
+  --color-text-secondary: var(--color-text-secondary);
+
+  --color-success: var(--color-success);
+  --color-success-soft: var(--color-success-soft);
+  --color-warning: var(--color-warning);
+  --color-warning-soft: var(--color-warning-soft);
+  --color-error: var(--color-error);
+  --color-error-soft: var(--color-error-soft);
+
+  --font-sans: var(--font-body), Arial, Helvetica, sans-serif;
+  --font-heading: var(--font-heading), var(--font-body), Arial, Helvetica, sans-serif;
+
+  /* Layout requirements: mobile 375 / tablet 768 / laptop 1024 / desktop 1440 / large desktop 1920 */
+  --breakpoint-sm: 40rem;   /* 640px */
+  --breakpoint-md: 48rem;   /* 768px  – tablet */
+  --breakpoint-lg: 64rem;   /* 1024px – laptop */
+  --breakpoint-xl: 90rem;   /* 1440px – desktop */
+  --breakpoint-2xl: 120rem; /* 1920px – large desktop */
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ─── Base ──────────────────────────────────────────────────────────────── */
+/* Wrapped in Tailwind's `base` layer so utility classes (e.g. text-white on
+   a heading) still win in the cascade instead of being shadowed by these. */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-page);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    color: var(--color-text);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+
+  h1 { font-size: clamp(2rem, 1.5rem + 2.2vw, 3.5rem); }
+  h2 { font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2.5rem); }
+  h3 { font-size: clamp(1.25rem, 1.1rem + 0.7vw, 1.75rem); }
+
+  p {
+    line-height: 1.6;
+  }
+}
+
+/* Consistent, visible keyboard focus everywhere, including custom components. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @keyframes marquee {
@@ -27,4 +144,9 @@ body {
 }
 .animate-marquee:hover {
   animation-play-state: paused;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to   { opacity: 1; transform: translateY(0); }
 }

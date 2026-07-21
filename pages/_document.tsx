@@ -4,8 +4,8 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        <title>ArtInYou</title>
-        <meta name="description" content="ArtInYou - Discover and book artists" />
+        <title>ArtiSync — Discover talent. Create together.</title>
+        <meta name="description" content="ArtiSync connects clients with talented artists for events, performances, and creative collaborations." />
       </Head>
       <body className="antialiased">
         <Main />
