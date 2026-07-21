@@ -54,6 +54,7 @@ export default function ClientOnboardingPage() {
         router.replace({ pathname: "/signup", query: { role: "client" } });
         return;
       }
+      if (window.location.href.includes("#")) window.history.replaceState(null, "", window.location.pathname + window.location.search);
       setUserId(u.id);
       const { data } = await supabase.from("clients").select("id").eq("id", u.id).maybeSingle();
       if (data) {

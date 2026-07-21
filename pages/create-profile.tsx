@@ -144,6 +144,7 @@ export default function CreateProfilePage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const u = session?.user;
       if (!u) { router.replace({ pathname: "/signup", query: { role: "artist" } }); return; }
+      if (window.location.href.includes("#")) window.history.replaceState(null, "", window.location.pathname + window.location.search);
       setUserId(u.id);
       setForm((p) => ({ ...p, email: u.email ?? p.email }));
       try {
