@@ -1,17 +1,21 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabaseClient";
+import { useToast } from "./Toast";
 
 export default function SaveArtistButton({
   artistId,
   clientId,
   className = "",
+  onChange,
 }: {
   artistId: string;
   clientId: string | null;
   className?: string;
+  onChange?: (saved: boolean) => void;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [saved, setSaved] = useState(false);
   const [checking, setChecking] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -29,15 +33,23 @@ export default function SaveArtistButton({
       router.push({ pathname: "/signup", query: { role: "client", returnTo: router.asPath } });
       return;
     }
+    if (busy) return;
+
+    // Optimistic update — this is safe here since the only failure mode is a
+    // network/RLS error, not a state that depends on server-computed values.
+    const nextSaved = !saved;
+    setSaved(nextSaved);
     setBusy(true);
     try {
-      if (saved) {
-        await supabase.from("saved_artists").delete().eq("client_id", clientId).eq("artist_id", artistId);
-        setSaved(false);
-      } else {
-        await supabase.from("saved_artists").insert({ client_id: clientId, artist_id: artistId });
-        setSaved(true);
-      }
+      const { error } = nextSaved
+        ? await supabase.from("saved_artists").upsert({ client_id: clientId, artist_id: artistId }, { onConflict: "client_id,artist_id", ignoreDuplicates: true })
+        : await supabase.from("saved_artists").delete().eq("client_id", clientId).eq("artist_id", artistId);
+      if (error) throw error;
+      onChange?.(nextSaved);
+      showToast(nextSaved ? "Saved to your list" : "Removed from saved", "success");
+    } catch {
+      setSaved(!nextSaved); // roll back
+      showToast("Something went wrong. Please try again.", "error");
     } finally {
       setBusy(false);
     }

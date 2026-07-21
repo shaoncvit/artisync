@@ -73,7 +73,14 @@ export default function SignupPage() {
 
       const userId = data.user?.id;
       const destination = userId ? await resolveEntryPath(userId, role) : role === "client" ? "/client-onboarding" : "/create-profile";
-      router.replace(destination);
+      const returnTo = typeof router.query.returnTo === "string" ? router.query.returnTo : undefined;
+      if (returnTo && destination === "/artists") {
+        router.replace(returnTo);
+      } else if (returnTo && (destination === "/client-onboarding" || destination === "/client-preferences")) {
+        router.replace({ pathname: destination, query: { returnTo } });
+      } else {
+        router.replace(destination);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Authentication failed");
     } finally {
@@ -87,9 +94,10 @@ export default function SignupPage() {
     try {
       // /auth/callback resolves the role-aware destination once the user lands
       // back on this domain, since an OAuth redirect can't run our own JS mid-flight.
+      const returnTo = typeof router.query.returnTo === "string" ? `&returnTo=${encodeURIComponent(router.query.returnTo)}` : "";
       const { error: authError } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: `${window.location.origin}/auth/callback?role=${role}` },
+        options: { redirectTo: `${window.location.origin}/auth/callback?role=${role}${returnTo}` },
       });
       if (authError) throw authError;
     } catch (err: unknown) {

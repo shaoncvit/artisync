@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { stripOAuthHashIfPresent } from "@/lib/stripOAuthHash";
+import { resolveEntryPath } from "@/lib/roleRouting";
 
 const INDIA_STATES: Record<string, string[]> = {
   "Andhra Pradesh": ["Vijayawada","Visakhapatnam","Guntur","Nellore","Tirupati","Kurnool","Rajahmundry","Kakinada","Eluru","Ongole"],
@@ -62,7 +63,7 @@ export default function ClientOnboardingPage() {
       const { data } = await supabase.from("clients").select("id").eq("id", u.id).maybeSingle();
       if (cancelled) return;
       if (data) {
-        router.replace("/artists");
+        router.replace(await resolveEntryPath(u.id, "client"));
         return;
       }
       setChecking(false);
@@ -98,8 +99,8 @@ export default function ClientOnboardingPage() {
         email: user?.email ?? "",
       });
       if (dbError) throw dbError;
-      const returnTo = typeof router.query.returnTo === "string" ? router.query.returnTo : "/artists";
-      router.replace(returnTo);
+      const returnTo = typeof router.query.returnTo === "string" ? router.query.returnTo : undefined;
+      router.replace({ pathname: "/client-preferences", query: returnTo ? { returnTo } : undefined });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to save");
       setSaving(false);
@@ -203,18 +204,7 @@ export default function ClientOnboardingPage() {
                 disabled={saving}
                 className="w-full rounded-xl bg-amber-400 px-4 py-3 font-black text-gray-900 hover:bg-amber-300 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200 text-sm"
               >
-                {saving ? "Saving..." : "Find Artists →"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const returnTo = typeof router.query.returnTo === "string" ? router.query.returnTo : "/artists";
-                  router.replace(returnTo);
-                }}
-                className="w-full text-center text-sm text-white/60 hover:text-white/90 transition-colors"
-              >
-                Skip for now
+                {saving ? "Saving..." : "Continue →"}
               </button>
             </form>
           </div>

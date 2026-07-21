@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { supabase, ARTIST_MEDIA_BUCKET } from "@/lib/supabaseClient";
 import { getArtistProfileCompleteness } from "@/lib/artistProfileCompleteness";
 import { stripOAuthHashIfPresent } from "@/lib/stripOAuthHash";
+import { geocodeLocation } from "@/lib/geocode";
 import ArtistOnboardingCard from "@/components/ArtistOnboardingCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import StepIndicator from "@/components/StepIndicator";
@@ -188,6 +189,7 @@ export default function CreateProfilePage() {
   const [newPerformanceCaptions, setNewPerformanceCaptions] = useState<string[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const perfInputRef = useRef<HTMLInputElement>(null);
+  const geocodedRef = useRef<{ query: string; lat: number | null; lng: number | null }>({ query: "", lat: null, lng: null });
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
 
@@ -229,6 +231,11 @@ export default function CreateProfilePage() {
             status: d.status === "published" ? "published" : "draft",
           };
           setForm(loaded);
+          geocodedRef.current = {
+            query: [loaded.area, loaded.city, loaded.state, "India"].filter(Boolean).join(", "),
+            lat: typeof d.latitude === "number" ? d.latitude : null,
+            lng: typeof d.longitude === "number" ? d.longitude : null,
+          };
           setProfileSaved(true);
           const { nextIncompleteSection } = getArtistProfileCompleteness(loaded);
           const requestedStep = Number(router.query.step);
@@ -370,6 +377,16 @@ export default function CreateProfilePage() {
 
       const nextStatus: "draft" | "published" = opts.publish ? "published" : form.status;
 
+      // Geocode the artist's own city/locality (never a street address) so
+      // distance-based search can work — only re-geocode if it changed.
+      const locationQuery = [form.area, form.city, form.state, "India"].filter(Boolean).join(", ");
+      if (locationQuery && locationQuery !== geocodedRef.current.query) {
+        const coords = await geocodeLocation(locationQuery);
+        geocodedRef.current = { query: locationQuery, lat: coords?.lat ?? null, lng: coords?.lng ?? null };
+      } else if (!locationQuery) {
+        geocodedRef.current = { query: "", lat: null, lng: null };
+      }
+
       const { error: dbError } = await supabase.from("artists").upsert({
         id: userId,
         full_name: form.fullName, stage_name: form.stageName, headline: form.headline,
@@ -377,6 +394,7 @@ export default function CreateProfilePage() {
         art_form: form.artForm, art_sub_forms: form.artSubForms, skills: form.skills, genres: form.genres, instruments: form.instruments, group_type: form.groupType,
         bio: form.bio,
         state: form.state, city: form.city, area: form.area, country: form.country, travel_preference: form.travelPreference,
+        latitude: geocodedRef.current.lat, longitude: geocodedRef.current.lng,
         youtube_videos: filteredVideos,
         youtube_video_captions: filteredVideoCaptions,
         performance_image_urls: allPerformanceUrls,

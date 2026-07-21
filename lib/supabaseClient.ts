@@ -71,6 +71,9 @@ export type ArtistProfile = {
   eventDuration: string;
   equipmentInfo: string;
   status: "draft" | "published";
+  /** Geocoded from city/locality, never a street address. Not exposed in any UI — only used to compute distance. */
+  latitude: number | null;
+  longitude: number | null;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -117,5 +120,7 @@ export function mapArtistRow(d: any): ArtistProfile {
     eventDuration: d.event_duration ?? "",
     equipmentInfo: d.equipment_info ?? "",
     status: d.status === "published" ? "published" : "draft",
+    latitude: typeof d.latitude === "number" ? d.latitude : null,
+    longitude: typeof d.longitude === "number" ? d.longitude : null,
   };
 }

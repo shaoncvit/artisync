@@ -28,7 +28,15 @@ export default function AuthCallbackPage() {
         return;
       }
       const destination = await resolveEntryPath(session.user.id, role);
-      if (!cancelled) router.replace(destination);
+      const returnTo = typeof router.query.returnTo === "string" ? router.query.returnTo : undefined;
+      if (cancelled) return;
+      if (returnTo && destination === "/artists") {
+        router.replace(returnTo);
+      } else if (returnTo && (destination === "/client-onboarding" || destination === "/client-preferences")) {
+        router.replace({ pathname: destination, query: { returnTo } });
+      } else {
+        router.replace(destination);
+      }
     }
 
     go();
