@@ -141,14 +141,17 @@ export default function CreateProfilePage() {
   });
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const u = session?.user;
+    let cancelled = false;
+
+    async function handleUser(u: { id: string; email?: string | null } | null | undefined) {
+      if (cancelled) return;
       if (!u) { router.replace({ pathname: "/signup", query: { role: "artist" } }); return; }
       if (window.location.href.includes("#")) window.history.replaceState(null, "", window.location.pathname + window.location.search);
       setUserId(u.id);
       setForm((p) => ({ ...p, email: u.email ?? p.email }));
       try {
         const { data: d } = await supabase.from("artists").select("*").eq("id", u.id).maybeSingle();
+        if (cancelled) return;
         if (d) {
           setForm((p) => ({
             ...p,
@@ -173,8 +176,18 @@ export default function CreateProfilePage() {
           setProfileSaved(true);
         }
       } catch {}
+    }
+
+    // getSession() reliably awaits the client's session restore; onAuthStateChange's
+    // first ("INITIAL_SESSION") event can otherwise fire with a stale null session
+    // and bounce the user back to signup before the real session loads.
+    supabase.auth.getSession().then(({ data: { session } }) => handleUser(session?.user));
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "INITIAL_SESSION") return;
+      handleUser(session?.user);
     });
-    return () => subscription.unsubscribe();
+    return () => { cancelled = true; subscription.unsubscribe(); };
   }, [router]);
 
   function update<K extends keyof ArtistProfile>(key: K, value: ArtistProfile[K]) {

@@ -48,8 +48,10 @@ export default function ClientOnboardingPage() {
   const [form, setForm] = useState({ fullName: "", phone: "", state: "", city: "" });
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const u = session?.user;
+    let cancelled = false;
+
+    async function handleUser(u: { id: string } | null | undefined) {
+      if (cancelled) return;
       if (!u) {
         router.replace({ pathname: "/signup", query: { role: "client" } });
         return;
@@ -57,13 +59,20 @@ export default function ClientOnboardingPage() {
       if (window.location.href.includes("#")) window.history.replaceState(null, "", window.location.pathname + window.location.search);
       setUserId(u.id);
       const { data } = await supabase.from("clients").select("id").eq("id", u.id).maybeSingle();
+      if (cancelled) return;
       if (data) {
         router.replace("/artists");
         return;
       }
       setChecking(false);
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => handleUser(session?.user));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "INITIAL_SESSION") return;
+      handleUser(session?.user);
     });
-    return () => subscription.unsubscribe();
+    return () => { cancelled = true; subscription.unsubscribe(); };
   }, [router]);
 
   function set(field: string, value: string) {

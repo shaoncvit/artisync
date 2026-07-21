@@ -177,18 +177,29 @@ export default function ProfilePreviewPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const u = session?.user;
+    let cancelled = false;
+
+    async function handleUser(u: { id: string } | null | undefined) {
+      if (cancelled) return;
       if (!u) { router.replace({ pathname: "/signup", query: { role: "artist" } }); return; }
       try {
         const { data: d, error: dbError } = await supabase.from("artists").select("*").eq("id", u.id).maybeSingle();
+        if (cancelled) return;
         if (dbError) throw dbError;
         if (d) setProfile(mapArtistRow(d)); else setError("No profile found.");
       } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : "Failed to load");
-      } finally { setLoading(false); }
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => handleUser(session?.user));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "INITIAL_SESSION") return;
+      handleUser(session?.user);
     });
-    return () => subscription.unsubscribe();
+    return () => { cancelled = true; subscription.unsubscribe(); };
   }, [router]);
 
   if (loading) return (
