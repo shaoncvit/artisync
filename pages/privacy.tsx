@@ -1,49 +1,200 @@
 import Head from "next/head";
+import Link from "next/link";
 import AppHeader from "@/components/AppHeader";
 import Footer from "@/components/Footer";
 import Container from "@/components/Container";
 import { SITE_URL, SITE_NAME } from "@/lib/siteConfig";
 
 const title = "Privacy Policy";
+const LAST_UPDATED = "24 July 2026";
+
+const SECTIONS = [
+  { id: "who-we-are", label: "1. Who we are" },
+  { id: "information-we-collect", label: "2. Information we collect" },
+  { id: "how-we-use-it", label: "3. How we use your information" },
+  { id: "contact-sharing", label: "4. Contact details and mutual consent" },
+  { id: "how-we-share", label: "5. How information is shared" },
+  { id: "retention", label: "6. Data retention" },
+  { id: "security", label: "7. Security" },
+  { id: "your-rights", label: "8. Your rights and choices" },
+  { id: "cookies", label: "9. Cookies and similar technologies" },
+  { id: "children", label: "10. Children's privacy" },
+  { id: "transfers", label: "11. International data processing" },
+  { id: "changes", label: "12. Changes to this policy" },
+  { id: "grievance", label: "13. Grievance officer and contact" },
+];
+
+function Section({ id, number, heading, children }: { id: string; number: string; heading: string; children: React.ReactNode }) {
+  return (
+    <section id={id} className="scroll-mt-24">
+      <h2 className="text-xl font-bold text-[var(--color-text)] flex items-baseline gap-2">
+        <span className="text-[var(--color-accent)]">{number}</span>
+        {heading}
+      </h2>
+      <div className="mt-3 space-y-3 text-[var(--color-text-secondary)] leading-relaxed">{children}</div>
+    </section>
+  );
+}
 
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-[var(--color-page)] flex flex-col">
       <Head>
         <title>{title} | {SITE_NAME}</title>
-        <meta name="description" content={`How ${SITE_NAME} collects, uses, and protects your data.`} />
+        <meta name="description" content={`How ${SITE_NAME} collects, uses, shares, and protects your personal information.`} />
         <link rel="canonical" href={`${SITE_URL}/privacy`} />
         <meta name="robots" content="noindex, follow" />
       </Head>
       <AppHeader />
-      <Container className="py-14 sm:py-20 flex-1 max-w-2xl">
-        <div className="mb-8 rounded-[var(--radius-md)] border border-[var(--color-warning)] bg-[var(--color-warning-soft)] p-4 text-sm text-[var(--color-text)]">
-          <strong>Draft — not yet legally reviewed.</strong> This describes how the product actually
-          works today. It has not been reviewed by a lawyer and should not be treated as a finished,
-          binding policy until it has been.
+
+      <Container className="py-14 sm:py-20 flex-1 max-w-3xl">
+        <p className="text-sm font-semibold text-[var(--color-accent)] uppercase tracking-wide">Legal</p>
+        <h1 className="mt-2 text-4xl">{title}</h1>
+        <p className="mt-3 text-sm text-[var(--color-text-secondary)]">
+          Last updated: {LAST_UPDATED} · Effective for all users of {SITE_URL.replace("https://", "")}
+        </p>
+
+        <div className="mt-6 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-sm text-[var(--color-text-secondary)]">
+          This policy has been drafted to accurately describe how {SITE_NAME} actually handles data today.
+          It has not yet been reviewed by a lawyer, and should be treated as a working draft rather than a
+          finalized legal document until that review is complete.
         </div>
-        <h1 className="text-3xl">{title}</h1>
-        <div className="mt-6 space-y-6 text-[var(--color-text-secondary)] leading-relaxed">
-          <section>
-            <h2 className="text-lg font-bold text-[var(--color-text)] mb-2">What we collect</h2>
-            <p>Account email and password (via our authentication provider), profile information you choose to add (name, bio, portfolio, pricing, location), and messages you send within enquiries and conversations.</p>
-          </section>
-          <section>
-            <h2 className="text-lg font-bold text-[var(--color-text)] mb-2">Contact details</h2>
-            <p>An artist&apos;s phone number, email, and website are never shown on their public profile or in any public page, API response, or search result. They are only revealed to a specific client after the artist explicitly approves a contact-sharing request from that client, and can be revoked afterward.</p>
-          </section>
-          <section>
-            <h2 className="text-lg font-bold text-[var(--color-text)] mb-2">Who can see your data</h2>
-            <p>Published artist profiles (excluding contact details) are public and visible to any visitor, including search engines. Enquiries, conversations, and messages are visible only to the two people involved, enforced at the database level, not just in the app&apos;s interface.</p>
-          </section>
-          <section>
-            <h2 className="text-lg font-bold text-[var(--color-text)] mb-2">What we don&apos;t do</h2>
-            <p>We don&apos;t sell your data. We don&apos;t process payments or store payment details — nothing on this platform handles money. We don&apos;t share your private contact information with anyone without your explicit approval.</p>
-          </section>
-          <section>
-            <h2 className="text-lg font-bold text-[var(--color-text)] mb-2">Your choices</h2>
-            <p>You can edit or delete your profile information, unpublish your artist profile at any time, and block or report another user from within a conversation.</p>
-          </section>
+
+        {/* Table of contents */}
+        <nav aria-label="Table of contents" className="mt-8 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+          <p className="text-sm font-bold text-[var(--color-text)] mb-3">Contents</p>
+          <ol className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
+            {SECTIONS.map((s) => (
+              <li key={s.id}>
+                <a href={`#${s.id}`} className="text-[var(--color-accent)] hover:underline">{s.label}</a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+
+        <div className="mt-10 space-y-10">
+          <Section id="who-we-are" number="1." heading="Who we are">
+            <p>
+              {SITE_NAME} (&quot;we,&quot; &quot;us,&quot; &quot;our&quot;) operates {SITE_URL.replace("https://", "")}, a directory and
+              private-enquiry platform connecting clients with performing and creative artists. For the
+              purposes of India&apos;s Digital Personal Data Protection Act, 2023 (&quot;DPDP Act&quot;), we act as
+              the Data Fiduciary for personal data processed through the platform, and you (as a
+              registered artist or client) are the Data Principal.
+            </p>
+          </Section>
+
+          <Section id="information-we-collect" number="2." heading="Information we collect">
+            <p>We collect only what&apos;s needed to operate the platform:</p>
+            <ul className="list-disc pl-5 space-y-1.5">
+              <li><strong>Account information:</strong> email address and password, managed through our authentication provider.</li>
+              <li><strong>Profile information:</strong> whatever an artist or client chooses to add — name, stage name, bio, category, skills, portfolio media, pricing, location, and (for artists) phone/email/website intended for private sharing.</li>
+              <li><strong>Enquiry and message content:</strong> the text and attachments exchanged through the enquiry and private-conversation system.</li>
+              <li><strong>Technical data:</strong> standard request logs (IP address, user agent, timestamps) generated by our hosting infrastructure for security and abuse prevention.</li>
+            </ul>
+            <p>We do not collect payment card details, government ID numbers, or biometric data.</p>
+          </Section>
+
+          <Section id="how-we-use-it" number="3." heading="How we use your information">
+            <ul className="list-disc pl-5 space-y-1.5">
+              <li>To create and operate your account, and to display published artist profiles publicly.</li>
+              <li>To route enquiries and messages between the client and artist involved.</li>
+              <li>To detect and respond to abuse, fraud, or violations of our Terms of Service.</li>
+              <li>To maintain and secure the platform (error monitoring, rate limiting, audit logs).</li>
+            </ul>
+            <p>We do not use your data for third-party advertising, and we do not sell or rent personal data to anyone.</p>
+          </Section>
+
+          <Section id="contact-sharing" number="4." heading="Contact details and mutual consent">
+            <p>
+              An artist&apos;s phone number, email, and website are private by default. They are never included
+              in a public profile page, public API response, sitemap, structured data, or search result —
+              this is enforced in our database access rules, not just hidden by the interface.
+            </p>
+            <p>
+              Contact details are revealed to a specific client only after the artist explicitly approves a
+              contact-sharing request from that client within a conversation, and approval can be revoked
+              afterward. Clients&apos; own contact details follow the same consent-gated mechanism.
+            </p>
+          </Section>
+
+          <Section id="how-we-share" number="5." heading="How information is shared">
+            <ul className="list-disc pl-5 space-y-1.5">
+              <li><strong>Other users:</strong> published profile fields are visible to any visitor. Enquiries, conversations, and messages are visible only to the two people involved, enforced at the database level.</li>
+              <li><strong>Service providers:</strong> we use Supabase (authentication, database, and file storage) and Vercel (hosting) as infrastructure processors. They process data on our behalf under their own security commitments and do not use it for their own purposes.</li>
+              <li><strong>Legal requirements:</strong> we may disclose information if required by law, court order, or to protect the rights, safety, or property of {SITE_NAME}, our users, or the public.</li>
+            </ul>
+            <p>We do not share personal data with data brokers or advertising networks.</p>
+          </Section>
+
+          <Section id="retention" number="6." heading="Data retention">
+            <p>
+              We retain account and profile data for as long as your account is active. If you delete your
+              account, profile and message data associated with it is removed or anonymized within a
+              reasonable period, except where retention is required for legal, security, or dispute-resolution
+              purposes (e.g., records of a filed report).
+            </p>
+          </Section>
+
+          <Section id="security" number="7." heading="Security">
+            <p>
+              Access to enquiries, conversations, and private contact details is restricted at the database
+              level using row-level security policies scoped to the specific users involved — this means
+              access control is enforced by the database itself, not only by application code. Passwords are
+              never stored by us directly; authentication is handled by our identity provider.
+            </p>
+            <p>No system is perfectly secure, and we can&apos;t guarantee absolute security of information transmitted to the platform.</p>
+          </Section>
+
+          <Section id="your-rights" number="8." heading="Your rights and choices">
+            <p>Consistent with the DPDP Act and general data protection principles, you can:</p>
+            <ul className="list-disc pl-5 space-y-1.5">
+              <li>Access, edit, or delete the information on your profile at any time.</li>
+              <li>Unpublish your artist profile, making it private and non-indexable.</li>
+              <li>Withdraw consent for a previously approved contact-sharing request.</li>
+              <li>Block or report another user from within a conversation.</li>
+              <li>Request a copy of your data, or full account deletion, by contacting us (see Section 13).</li>
+            </ul>
+          </Section>
+
+          <Section id="cookies" number="9." heading="Cookies and similar technologies">
+            <p>
+              We use strictly necessary cookies/local storage to keep you signed in and to remember basic
+              preferences. We do not currently use third-party advertising or cross-site tracking cookies.
+              If we add analytics in the future, this policy will be updated before that data collection begins.
+            </p>
+          </Section>
+
+          <Section id="children" number="10." heading="Children's privacy">
+            <p>
+              {SITE_NAME} is not directed at children under 18. We do not knowingly collect personal data from
+              children. If you believe a child has created an account, contact us and we will remove it.
+            </p>
+          </Section>
+
+          <Section id="transfers" number="11." heading="International data processing">
+            <p>
+              Our infrastructure providers may process and store data outside India as part of their normal
+              hosting operations. Where this occurs, it is governed by those providers&apos; own security and
+              compliance commitments.
+            </p>
+          </Section>
+
+          <Section id="changes" number="12." heading="Changes to this policy">
+            <p>
+              We may update this policy as the product changes. Material changes will be reflected here with
+              an updated &quot;Last updated&quot; date at the top of this page.
+            </p>
+          </Section>
+
+          <Section id="grievance" number="13." heading="Grievance officer and contact">
+            <p>
+              For privacy questions, data access/deletion requests, or complaints, use the Report option
+              inside a conversation for user-to-user issues, or reach out via the contact details on our{" "}
+              <Link href="/contact" className="text-[var(--color-accent)] hover:underline">Contact page</Link>.
+              A named Grievance Officer, as contemplated under the DPDP Act, will be designated here once
+              one is formally appointed.
+            </p>
+          </Section>
         </div>
       </Container>
       <Footer />
