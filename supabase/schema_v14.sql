@@ -173,7 +173,11 @@ alter table public.job_applications
   add column if not exists attachment_url text,
   add column if not exists attachment_type text;
 
-create or replace function public.list_job_applicants(p_job_id uuid)
+-- Postgres won't let CREATE OR REPLACE change a function's return columns
+-- (schema_v13.sql's version had fewer OUT params) — must drop it first.
+drop function if exists public.list_job_applicants(uuid);
+
+create function public.list_job_applicants(p_job_id uuid)
 returns table (
   application_id uuid,
   artist_id uuid,
@@ -217,6 +221,9 @@ begin
   order by ja.created_at desc;
 end;
 $$;
+
+revoke all on function public.list_job_applicants(uuid) from public;
+grant execute on function public.list_job_applicants(uuid) to authenticated;
 
 -- ─── Private storage bucket for application attachments ───────────────────
 -- Path convention: `${job_id}/${artist_id}/${filename}` — lets both the
