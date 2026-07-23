@@ -5,7 +5,7 @@ import Head from "next/head";
 import Link from "next/link";
 import Image from "next/image";
 import { supabase, mapArtistRow, type ArtistProfile } from "@/lib/supabaseClient";
-import { ARTIST_CATEGORIES, ALL_CITIES, CATEGORY_ALIASES } from "@/lib/sharedConfig";
+import { ARTIST_CATEGORIES, ALL_CITIES, CATEGORY_ALIASES, pluralizeCategory } from "@/lib/sharedConfig";
 import { slugify, buildSlugLookup } from "@/lib/slugify";
 import Container from "@/components/Container";
 import Button from "@/components/Button";
@@ -255,11 +255,13 @@ function ArtistProfileView({ profile }: { profile: ArtistProfile }) {
 
       {/* ── Navbar ── */}
       <div className="sticky top-0 z-40 flex items-center justify-between px-5 h-14 bg-[var(--color-primary)]/90 backdrop-blur-md">
-        <Link href="/artists" className="flex items-center gap-2 text-white/80 hover:text-white text-sm font-medium transition-colors">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-          All Artists
-        </Link>
-        <Logo href={null} variant="light" size="sm" iconOnly className="absolute left-1/2 -translate-x-1/2" />
+        <div className="flex items-center gap-5">
+          <Logo href="/" variant="light" size="sm" />
+          <Link href="/artists" className="hidden sm:flex items-center gap-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            All Artists
+          </Link>
+        </div>
         {userId ? (
           <button onClick={() => supabase.auth.signOut()} className="text-xs font-semibold text-white/70 hover:text-white transition-colors">Sign out</button>
         ) : (
@@ -279,7 +281,7 @@ function ArtistProfileView({ profile }: { profile: ArtistProfile }) {
             {profile.artForm && (
               <>
                 <li aria-hidden="true">/</li>
-                <li><Link href={`/artists/${slugify(profile.artForm)}`} className="hover:text-[var(--color-text)]">{profile.artForm}s</Link></li>
+                <li><Link href={`/artists/${slugify(profile.artForm)}`} className="hover:text-[var(--color-text)]">{pluralizeCategory(profile.artForm)}</Link></li>
               </>
             )}
             {profile.city && (
@@ -450,7 +452,8 @@ function ListingView({ category, city, artists, totalCount, indexable }: Listing
   const [visibleCount, setVisibleCount] = useState(24);
   const title = buildListingTitle(category, city);
   const description = buildListingDescription(category, city, totalCount);
-  const h1 = category && city ? `${category}s in ${city}` : category ? `${category}s` : `Artists in ${city}`;
+  const categoryPlural = category ? pluralizeCategory(category) : null;
+  const h1 = categoryPlural && city ? `${categoryPlural} in ${city}` : categoryPlural ? categoryPlural : `Artists in ${city}`;
 
   const path = ["/artists", category ? slugify(category) : null, city ? slugify(city) : null].filter(Boolean).join("/");
   const canonicalUrl = `${SITE_URL}${path}`;
@@ -488,9 +491,9 @@ function ListingView({ category, city, artists, totalCount, indexable }: Listing
               <>
                 <li aria-hidden="true">/</li>
                 {city ? (
-                  <li><Link href={`/artists/${slugify(category)}`} className="hover:text-[var(--color-text)]">{category}s</Link></li>
+                  <li><Link href={`/artists/${slugify(category)}`} className="hover:text-[var(--color-text)]">{categoryPlural}</Link></li>
                 ) : (
-                  <li aria-current="page" className="text-[var(--color-text)]">{category}s</li>
+                  <li aria-current="page" className="text-[var(--color-text)]">{categoryPlural}</li>
                 )}
               </>
             )}
@@ -506,8 +509,8 @@ function ListingView({ category, city, artists, totalCount, indexable }: Listing
         <h1 className="text-3xl">{h1}</h1>
         <p className="mt-3 max-w-2xl text-[var(--color-text-secondary)]">
           {totalCount > 0
-            ? `${totalCount} ${category ? `${category.toLowerCase()}${totalCount === 1 ? "" : "s"}` : "artist" + (totalCount === 1 ? "" : "s")}${city ? ` in ${city}` : ""} on ${SITE_NAME}. Browse portfolios, languages, and pricing, then send a private enquiry.`
-            : `We don't have any published ${category ? category.toLowerCase() + "s" : "artists"}${city ? ` in ${city}` : ""} yet. Check back soon, or browse all artists.`}
+            ? `${totalCount} ${categoryPlural ?? "Artists"}${city ? ` in ${city}` : ""} on ${SITE_NAME}. Browse portfolios, languages, and pricing, then send a private enquiry.`
+            : `We don't have any published ${categoryPlural ?? "artists"}${city ? ` in ${city}` : ""} yet. Check back soon, or browse all artists.`}
         </p>
 
         {artists.length === 0 ? (
@@ -547,7 +550,7 @@ function ListingView({ category, city, artists, totalCount, indexable }: Listing
         {category && city && (
           <div className="mt-14 flex flex-wrap gap-6">
             <Link href={`/artists/${slugify(category)}`} className="text-sm text-[var(--color-accent)] hover:underline">
-              See all {category}s (all cities)
+              See all {categoryPlural} (all cities)
             </Link>
             <Link href={`/artists/${slugify(city)}`} className="text-sm text-[var(--color-accent)] hover:underline">
               See all artists in {city}
@@ -561,7 +564,7 @@ function ListingView({ category, city, artists, totalCount, indexable }: Listing
             <div className="flex flex-wrap gap-2">
               {otherCategories.map((c) => (
                 <Link key={c} href={`/artists/${slugify(c)}`} className="text-sm px-3 py-1.5 rounded-full border border-[var(--color-border)] hover:border-[var(--color-accent)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]">
-                  {c}s
+                  {pluralizeCategory(c)}
                 </Link>
               ))}
             </div>
@@ -574,7 +577,7 @@ function ListingView({ category, city, artists, totalCount, indexable }: Listing
             <div className="flex flex-wrap gap-2">
               {POPULAR_CITIES.map((c) => (
                 <Link key={c} href={`/artists/${slugify(category)}/${slugify(c)}`} className="text-sm px-3 py-1.5 rounded-full border border-[var(--color-border)] hover:border-[var(--color-accent)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]">
-                  {category}s in {c}
+                  {categoryPlural} in {c}
                 </Link>
               ))}
             </div>

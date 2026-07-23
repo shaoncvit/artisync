@@ -1,5 +1,6 @@
 import type { ArtistProfile } from "./supabaseClient";
 import { SITE_NAME } from "./siteConfig";
+import { pluralizeCategory } from "./sharedConfig";
 
 /** Minimum published-artist count for a category/city landing page to be
  * indexable — below this it stays reachable but noindex, to avoid thin
@@ -30,14 +31,15 @@ export function buildArtistDescription(profile: Pick<ArtistProfile, "fullName" |
 
 /** Unique title/description for a category and/or city discovery landing page. */
 export function buildListingTitle(category: string | null, city: string | null): string {
-  if (category && city) return `${category}s in ${city} | ${SITE_NAME}`;
-  if (category) return `${category}s | ${SITE_NAME}`;
+  const plural = category ? pluralizeCategory(category) : null;
+  if (plural && city) return `${plural} in ${city} | ${SITE_NAME}`;
+  if (plural) return `${plural} | ${SITE_NAME}`;
   if (city) return `Artists in ${city} | ${SITE_NAME}`;
   return `Discover Artists | ${SITE_NAME}`;
 }
 
 export function buildListingDescription(category: string | null, city: string | null, count: number): string {
-  const who = category ? `${category.toLowerCase()}s` : "artists";
+  const who = category ? pluralizeCategory(category) : "artists";
   const where = city ? ` in ${city}` : "";
   return `Browse ${count} ${who}${where} on ${SITE_NAME}. Compare portfolios, languages, pricing and availability, then send a private enquiry.`;
 }

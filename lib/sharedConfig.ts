@@ -27,6 +27,30 @@ export const ART_FORMS: Record<string, string[]> = {
 
 export const ARTIST_CATEGORIES = Object.keys(ART_FORMS);
 
+// Display-friendly plural for category headings/links ("Singers", "DJs").
+// Naively appending "s" reads badly for several categories ("Music" ->
+// "Musics", "Spoken Word / Poetry" -> "...Poetrys") — explicit overrides
+// for the canonical list, and a safe "{name} Artists" fallback for any
+// legacy/unrecognized value stored on an older profile.
+const CATEGORY_PLURALS: Record<string, string> = {
+  Musician: "Musicians",
+  Singer: "Singers",
+  Dancer: "Dancers",
+  "Actor / Theatre": "Actors & Theatre Artists",
+  Comedian: "Comedians",
+  Magician: "Magicians",
+  DJ: "DJs",
+  "Anchor / Emcee": "Anchors & Emcees",
+  "Visual Artist": "Visual Artists",
+  "Spoken Word / Poetry": "Spoken Word & Poetry Artists",
+  "Circus / Acrobat": "Circus & Acrobat Artists",
+  Photographer: "Photographers",
+};
+
+export function pluralizeCategory(category: string): string {
+  return CATEGORY_PLURALS[category] ?? `${category} Artists`;
+}
+
 // Common alternate words people actually type for a category (plurals,
 // gerunds, genre names) mapped to the canonical ART_FORMS key. Used only
 // for URL resolution (/artists/{alias} redirects to the canonical slug) —
