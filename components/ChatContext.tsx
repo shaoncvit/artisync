@@ -26,7 +26,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
 
   const refreshConversations = useCallback(async () => {
-    const { data } = await listMyConversations();
+    const { data, error } = await listMyConversations();
+    if (error) console.error("Failed to load conversations:", error.message);
     setConversations((data as ConversationSummary[]) ?? []);
   }, []);
 
