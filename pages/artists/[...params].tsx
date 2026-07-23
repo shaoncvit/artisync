@@ -5,7 +5,7 @@ import Head from "next/head";
 import Link from "next/link";
 import Image from "next/image";
 import { supabase, mapArtistRow, type ArtistProfile } from "@/lib/supabaseClient";
-import { ARTIST_CATEGORIES, ALL_CITIES } from "@/lib/sharedConfig";
+import { ARTIST_CATEGORIES, ALL_CITIES, CATEGORY_ALIASES } from "@/lib/sharedConfig";
 import { slugify, buildSlugLookup } from "@/lib/slugify";
 import Container from "@/components/Container";
 import Button from "@/components/Button";
@@ -139,6 +139,13 @@ async function buildListingResult(category: string | null, city: string | null):
   };
 }
 
+// Resolves a URL segment to a canonical category name, whether it's already
+// the canonical slug (e.g. "dancer") or a common alternate wording people
+// actually type (e.g. "dance", "dancers", "music" for "Musician").
+function resolveCategorySegment(seg: string, categoryLookup: Record<string, string>): string | null {
+  return categoryLookup[seg] ?? CATEGORY_ALIASES[seg] ?? null;
+}
+
 export const getStaticProps: GetStaticProps<PageProps> = async ({ params }) => {
   const segments = ((params?.params as string[] | undefined) ?? []).map((s) => s.toLowerCase());
   if (segments.length === 0 || segments.length > 2) return { notFound: true };
@@ -148,7 +155,14 @@ export const getStaticProps: GetStaticProps<PageProps> = async ({ params }) => {
 
   if (segments.length === 1) {
     const [seg] = segments;
-    if (categoryLookup[seg]) return buildListingResult(categoryLookup[seg], null);
+    const category = resolveCategorySegment(seg, categoryLookup);
+    if (category) {
+      const canonicalSlug = slugify(category);
+      // An alias (e.g. "dance") — redirect permanently to the canonical
+      // slug ("dancer") instead of serving duplicate content at both URLs.
+      if (canonicalSlug !== seg) return { redirect: { destination: `/artists/${canonicalSlug}`, permanent: true } };
+      return buildListingResult(category, null);
+    }
     if (cityLookup[seg]) return buildListingResult(null, cityLookup[seg]);
     // Not a known category or city slug — treat as an artist profile slug.
     return buildProfileResult(seg);
@@ -156,8 +170,11 @@ export const getStaticProps: GetStaticProps<PageProps> = async ({ params }) => {
 
   // Two segments: only the category/city combination is a recognized route.
   const [seg1, seg2] = segments;
-  if (categoryLookup[seg1] && cityLookup[seg2]) {
-    return buildListingResult(categoryLookup[seg1], cityLookup[seg2]);
+  const category = resolveCategorySegment(seg1, categoryLookup);
+  if (category && cityLookup[seg2]) {
+    const canonicalSlug = slugify(category);
+    if (canonicalSlug !== seg1) return { redirect: { destination: `/artists/${canonicalSlug}/${seg2}`, permanent: true } };
+    return buildListingResult(category, cityLookup[seg2]);
   }
   return { notFound: true };
 };

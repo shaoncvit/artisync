@@ -27,6 +27,25 @@ export const ART_FORMS: Record<string, string[]> = {
 
 export const ARTIST_CATEGORIES = Object.keys(ART_FORMS);
 
+// Common alternate words people actually type for a category (plurals,
+// gerunds, genre names) mapped to the canonical ART_FORMS key. Used only
+// for URL resolution (/artists/{alias} redirects to the canonical slug) —
+// never as a stored value, so matching logic elsewhere stays unambiguous.
+export const CATEGORY_ALIASES: Record<string, string> = {
+  music: "Musician", musicians: "Musician",
+  singers: "Singer", singing: "Singer", vocalist: "Singer", vocalists: "Singer",
+  dance: "Dancer", dancers: "Dancer", dancing: "Dancer",
+  actors: "Actor / Theatre", theatre: "Actor / Theatre", theater: "Actor / Theatre", acting: "Actor / Theatre",
+  comedians: "Comedian", comedy: "Comedian", "stand-up": "Comedian", standup: "Comedian",
+  magicians: "Magician", magic: "Magician",
+  djs: "DJ",
+  anchors: "Anchor / Emcee", emcee: "Anchor / Emcee", emcees: "Anchor / Emcee", host: "Anchor / Emcee", hosts: "Anchor / Emcee",
+  "visual-artists": "Visual Artist", painters: "Visual Artist", painting: "Visual Artist",
+  poets: "Spoken Word / Poetry", poetry: "Spoken Word / Poetry", "spoken-word": "Spoken Word / Poetry",
+  acrobats: "Circus / Acrobat", circus: "Circus / Acrobat", acrobat: "Circus / Acrobat",
+  photographers: "Photographer", photography: "Photographer",
+};
+
 // Canonical event types — what an artist actually stores on their profile
 // and what the enquiry form offers, so a client's stated event-type
 // preference can match real artist data.
