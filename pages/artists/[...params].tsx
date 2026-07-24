@@ -91,7 +91,9 @@ function InstagramVideoCard({ url }: { url: string }) {
 function VideoList({ urls, captions }: { urls: string[]; captions?: string[] }) {
   const entries = urls
     .map((u, i) => ({ url: u, caption: captions?.[i] ?? "", vid: getYouTubeId(u), instagram: isInstagramVideoUrl(u) }))
-    .filter((e) => e.vid || e.instagram);
+    .filter((e) => e.vid || e.instagram)
+    // YouTube first — Instagram links are the fallback, not the preferred format.
+    .sort((a, b) => Number(!!b.vid) - Number(!!a.vid));
   if (!entries.length) return null;
 
   return (

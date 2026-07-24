@@ -906,7 +906,7 @@ export default function CreateProfilePage() {
 
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <FieldLabel optional>YouTube or Instagram video links</FieldLabel>
+                  <FieldLabel optional>Video links (YouTube preferred)</FieldLabel>
                   {form.youtubeVideos.length < 6 && (
                     <button type="button" onClick={() => { update("youtubeVideos", [...form.youtubeVideos, ""]); update("youtubeVideoCaptions", [...form.youtubeVideoCaptions, ""]); }}
                       className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)]">
@@ -919,7 +919,7 @@ export default function CreateProfilePage() {
                   <div className="mb-3 rounded-[var(--radius-md)] bg-[var(--color-accent-soft)] px-4 py-3">
                     <p className="text-sm font-semibold text-[var(--color-accent-hover)]">This is your moment — get your performances on video!</p>
                     <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                      Profiles with a video get noticed first. If you don&apos;t have one yet, now&apos;s a great time to start a YouTube channel or post a reel on Instagram — even a short clip of you performing makes a huge difference. Then paste the link below.
+                      Profiles with a video get noticed first. A YouTube link works best here — if you don&apos;t have a channel yet, now&apos;s a great time to create one and upload even a short clip of you performing, then paste the link below. No YouTube? An Instagram reel link works too.
                     </p>
                   </div>
                 )}
@@ -930,7 +930,7 @@ export default function CreateProfilePage() {
                     return (
                       <div key={i} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-md)] overflow-hidden">
                         <div className="flex items-center gap-3 px-4 py-3">
-                          <input type="url" placeholder={`Video ${i + 1} — paste a YouTube or Instagram link`} value={url}
+                          <input type="url" placeholder={`Video ${i + 1} — paste a YouTube link (Instagram also works)`} value={url}
                             onChange={(e) => { const v = [...form.youtubeVideos]; v[i] = e.target.value; update("youtubeVideos", v); }}
                             className="flex-1 text-sm bg-transparent border-none outline-none" />
                           {valid && <span className="text-xs text-[var(--color-success)] font-medium flex-shrink-0">✓ valid</span>}
