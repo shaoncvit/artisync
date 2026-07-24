@@ -98,6 +98,14 @@ function FieldLabel({ children, optional }: { children: React.ReactNode; optiona
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+// A single portfolio photo, whether already uploaded or picked locally and
+// still pending upload — kept as one ordered list so drag-to-reorder works
+// across both kinds instead of only within the already-saved ones.
+type PortfolioItem = { id: string; caption: string } & (
+  | { kind: "saved"; url: string }
+  | { kind: "new"; file: File; previewUrl: string }
+);
+
 type FormState = {
   fullName: string; stageName: string; headline: string; username: string;
   profilePicture: File | null; profilePictureUrl: string;
@@ -147,9 +155,9 @@ export default function CreateProfilePage() {
   const [stepErrors, setStepErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const [newPerformanceFiles, setNewPerformanceFiles] = useState<File[]>([]);
-  const [performancePreviews, setPerformancePreviews] = useState<string[]>([]);
-  const [newPerformanceCaptions, setNewPerformanceCaptions] = useState<string[]>([]);
+  const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
+  const [draggedPortfolioIndex, setDraggedPortfolioIndex] = useState<number | null>(null);
+  const [portfolioDragOver, setPortfolioDragOver] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const perfInputRef = useRef<HTMLInputElement>(null);
   const geocodedRef = useRef<{ query: string; lat: number | null; lng: number | null }>({ query: "", lat: null, lng: null });
@@ -206,6 +214,9 @@ export default function CreateProfilePage() {
             status: d.status === "published" ? "published" : "draft",
           };
           setForm(loaded);
+          setPortfolioItems(loaded.performanceImageUrls.map((url, i) => ({
+            id: url, kind: "saved", url, caption: loaded.performanceImageCaptions[i] ?? "",
+          })));
           const loadedSubForms = ART_FORMS[loaded.artForm] ?? [];
           const existingCustomSpecialization = loaded.artSubForms.find((v) => !loadedSubForms.includes(v));
           if (existingCustomSpecialization) {
@@ -301,39 +312,64 @@ export default function CreateProfilePage() {
     return data.publicUrl;
   }
 
-  function handlePerfImagesAdd(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    if (!files.length) return;
-    const remaining = 12 - form.performanceImageUrls.length - newPerformanceFiles.length;
-    const toAdd = files.slice(0, remaining);
-    setNewPerformanceFiles((p) => [...p, ...toAdd]);
-    setPerformancePreviews((p) => [...p, ...toAdd.map((f) => URL.createObjectURL(f))]);
-    setNewPerformanceCaptions((p) => [...p, ...toAdd.map(() => "")]);
+  function addPortfolioFiles(files: File[]) {
+    const images = files.filter((f) => f.type.startsWith("image/"));
+    if (!images.length) return;
+    const remaining = 12 - portfolioItems.length;
+    if (remaining <= 0) return;
+    const toAdd = images.slice(0, remaining);
+    setPortfolioItems((prev) => [
+      ...prev,
+      ...toAdd.map((file, i) => ({
+        id: `new-${Date.now()}-${i}-${file.name}`,
+        kind: "new" as const,
+        file,
+        previewUrl: URL.createObjectURL(file),
+        caption: "",
+      })),
+    ]);
     setDirty(true);
+  }
+
+  function handlePerfImagesAdd(e: React.ChangeEvent<HTMLInputElement>) {
+    addPortfolioFiles(Array.from(e.target.files ?? []));
     e.target.value = "";
   }
 
-  function removeExistingImage(idx: number) {
-    update("performanceImageUrls", form.performanceImageUrls.filter((_, i) => i !== idx));
-    update("performanceImageCaptions", form.performanceImageCaptions.filter((_, i) => i !== idx));
+  function removePortfolioItem(id: string) {
+    setPortfolioItems((prev) => {
+      const item = prev.find((p) => p.id === id);
+      if (item?.kind === "new") URL.revokeObjectURL(item.previewUrl);
+      return prev.filter((p) => p.id !== id);
+    });
+    setDirty(true);
   }
 
-  function moveExistingImage(idx: number, dir: -1 | 1) {
-    const target = idx + dir;
-    if (target < 0 || target >= form.performanceImageUrls.length) return;
-    const urls = [...form.performanceImageUrls];
-    const caps = [...form.performanceImageCaptions];
-    [urls[idx], urls[target]] = [urls[target], urls[idx]];
-    [caps[idx], caps[target]] = [caps[target], caps[idx]];
-    update("performanceImageUrls", urls);
-    update("performanceImageCaptions", caps);
+  function updatePortfolioCaption(id: string, caption: string) {
+    setPortfolioItems((prev) => prev.map((p) => (p.id === id ? { ...p, caption } : p)));
+    setDirty(true);
   }
 
-  function removeNewImage(idx: number) {
-    URL.revokeObjectURL(performancePreviews[idx]);
-    setNewPerformanceFiles((p) => p.filter((_, i) => i !== idx));
-    setPerformancePreviews((p) => p.filter((_, i) => i !== idx));
-    setNewPerformanceCaptions((p) => p.filter((_, i) => i !== idx));
+  function movePortfolioItem(idx: number, dir: -1 | 1) {
+    setPortfolioItems((prev) => {
+      const target = idx + dir;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
+    setDirty(true);
+  }
+
+  function reorderPortfolio(fromIdx: number, toIdx: number) {
+    if (fromIdx === toIdx) return;
+    setPortfolioItems((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      return next;
+    });
+    setDirty(true);
   }
 
   // ── Validation (only the current step) ────────────────────────────────────
@@ -366,15 +402,18 @@ export default function CreateProfilePage() {
         coverBannerUrl = await uploadFile(form.coverBanner, `${userId}/banner_${Date.now()}.${form.coverBanner.name.split(".").pop()}`);
       }
 
-      const newImageUrls = await Promise.all(
-        newPerformanceFiles.map((f, i) => {
-          setUploadingMedia(true);
-          return uploadFile(f, `${userId}/perf_${Date.now()}_${i}.${f.name.split(".").pop()}`);
-        })
+      if (portfolioItems.some((p) => p.kind === "new")) setUploadingMedia(true);
+      const uploadedPortfolio = await Promise.all(
+        portfolioItems.map((item, i) =>
+          item.kind === "saved"
+            ? Promise.resolve({ url: item.url, caption: item.caption })
+            : uploadFile(item.file, `${userId}/perf_${Date.now()}_${i}.${item.file.name.split(".").pop()}`)
+                .then((url) => ({ url, caption: item.caption }))
+        )
       );
       setUploadingMedia(false);
-      const allPerformanceUrls = [...form.performanceImageUrls, ...newImageUrls];
-      const allPerformanceCaptions = [...form.performanceImageCaptions, ...newPerformanceCaptions];
+      const allPerformanceUrls = uploadedPortfolio.map((p) => p.url);
+      const allPerformanceCaptions = uploadedPortfolio.map((p) => p.caption);
 
       const filteredVideos = form.youtubeVideos.filter((v) => v.trim());
       const filteredVideoCaptions = form.youtubeVideos
@@ -417,7 +456,7 @@ export default function CreateProfilePage() {
       if (dbError) throw dbError;
 
       setForm((p) => ({ ...p, profilePicture: null, coverBanner: null, profilePictureUrl, coverBannerUrl, performanceImageUrls: allPerformanceUrls, performanceImageCaptions: allPerformanceCaptions, status: nextStatus }));
-      setNewPerformanceFiles([]); setPerformancePreviews([]); setNewPerformanceCaptions([]);
+      setPortfolioItems(allPerformanceUrls.map((url, i) => ({ id: url, kind: "saved", url, caption: allPerformanceCaptions[i] ?? "" })));
       setProfileSaved(true); setDirty(false);
       if (!opts.silent) setSuccessMessage(opts.publish ? "Profile published! Clients can now discover you." : "Draft saved.");
       return true;
@@ -473,8 +512,7 @@ export default function CreateProfilePage() {
 
   const subForms = ART_FORMS[form.artForm] ?? [];
   const stateCities = form.state ? (INDIA_STATES[form.state] ?? []) : [];
-  const allPerformancePreviews = [...form.performanceImageUrls, ...performancePreviews];
-  const totalImages = allPerformancePreviews.length;
+  const totalImages = portfolioItems.length;
   const completeness = getArtistProfileCompleteness(form);
 
   if (checkingProfile) {
@@ -836,55 +874,66 @@ export default function CreateProfilePage() {
                   <FieldLabel optional>Performance photographs</FieldLabel>
                   <span className="text-xs text-[var(--color-text-secondary)]">{totalImages}/12</span>
                 </div>
-                <p className="mb-3 text-xs text-[var(--color-text-secondary)]">JPG or PNG, up to 5MB each. Drag order with the arrows.</p>
+                <p className="mb-3 text-xs text-[var(--color-text-secondary)]">JPG or PNG, up to 5MB each. Drag and drop to upload, or drag a photo onto another to reorder.</p>
                 <input ref={perfInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePerfImagesAdd} />
 
                 {totalImages === 0 ? (
-                  <button type="button" onClick={() => perfInputRef.current?.click()}
-                    className="w-full rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--color-border)] hover:border-[var(--color-accent)] py-12 flex flex-col items-center justify-center gap-2 text-[var(--color-text-secondary)] transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => perfInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); setPortfolioDragOver(true); }}
+                    onDragLeave={() => setPortfolioDragOver(false)}
+                    onDrop={(e) => { e.preventDefault(); setPortfolioDragOver(false); addPortfolioFiles(Array.from(e.dataTransfer.files)); }}
+                    className={`w-full rounded-[var(--radius-lg)] border-2 border-dashed py-12 flex flex-col items-center justify-center gap-2 text-[var(--color-text-secondary)] transition-colors ${
+                      portfolioDragOver ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)]" : "border-[var(--color-border)] hover:border-[var(--color-accent)]"
+                    }`}
+                  >
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
                     </svg>
-                    <span className="text-sm font-medium">No photos yet — add your first one</span>
+                    <span className="text-sm font-medium">No photos yet — drag some in, or click to add</span>
                   </button>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {form.performanceImageUrls.map((url, i) => (
-                      <div key={`saved-${url}`} className="flex flex-col gap-1.5 group">
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setPortfolioDragOver(true); }}
+                    onDragLeave={() => setPortfolioDragOver(false)}
+                    onDrop={(e) => { e.preventDefault(); setPortfolioDragOver(false); addPortfolioFiles(Array.from(e.dataTransfer.files)); }}
+                    className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 rounded-[var(--radius-lg)] transition-colors ${portfolioDragOver ? "ring-2 ring-[var(--color-accent)] bg-[var(--color-accent-soft)]/40" : ""}`}
+                  >
+                    {portfolioItems.map((item, i) => (
+                      <div
+                        key={item.id}
+                        draggable
+                        onDragStart={() => setDraggedPortfolioIndex(i)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (draggedPortfolioIndex !== null) reorderPortfolio(draggedPortfolioIndex, i);
+                          setDraggedPortfolioIndex(null);
+                        }}
+                        onDragEnd={() => setDraggedPortfolioIndex(null)}
+                        className={`flex flex-col gap-1.5 group cursor-move ${draggedPortfolioIndex === i ? "opacity-40" : ""}`}
+                      >
                         <div className="relative aspect-square rounded-[var(--radius-md)] overflow-hidden bg-[var(--color-primary-soft)]">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={url} alt="" className="w-full h-full object-cover" />
-                          <button type="button" onClick={() => removeExistingImage(i)}
+                          <img src={item.kind === "saved" ? item.url : item.previewUrl} alt="" draggable={false} className="w-full h-full object-cover pointer-events-none" />
+                          {item.kind === "new" && <span className="absolute bottom-1 left-1 text-[10px] text-white bg-blue-500/80 px-1.5 py-0.5 rounded">new</span>}
+                          <button type="button" onClick={() => removePortfolioItem(item.id)}
                             className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                           </button>
-                          <div className="absolute bottom-1 left-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button type="button" disabled={i === 0} onClick={() => moveExistingImage(i, -1)} className="w-6 h-6 bg-black/60 disabled:opacity-30 text-white rounded-full flex items-center justify-center">
+                          <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button type="button" disabled={i === 0} onClick={() => movePortfolioItem(i, -1)} className="w-6 h-6 bg-black/60 disabled:opacity-30 text-white rounded-full flex items-center justify-center">
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                             </button>
-                            <button type="button" disabled={i === form.performanceImageUrls.length - 1} onClick={() => moveExistingImage(i, 1)} className="w-6 h-6 bg-black/60 disabled:opacity-30 text-white rounded-full flex items-center justify-center">
+                            <button type="button" disabled={i === portfolioItems.length - 1} onClick={() => movePortfolioItem(i, 1)} className="w-6 h-6 bg-black/60 disabled:opacity-30 text-white rounded-full flex items-center justify-center">
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                             </button>
                           </div>
                         </div>
-                        <input type="text" placeholder="Caption (optional)" value={form.performanceImageCaptions[i] ?? ""}
-                          onChange={(e) => { const caps = [...form.performanceImageCaptions]; caps[i] = e.target.value; update("performanceImageCaptions", caps); }}
-                          className="w-full text-xs bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-sm)] px-2 py-1.5" />
-                      </div>
-                    ))}
-                    {performancePreviews.map((src, i) => (
-                      <div key={`new-${i}`} className="flex flex-col gap-1.5 group">
-                        <div className="relative aspect-square rounded-[var(--radius-md)] overflow-hidden bg-[var(--color-primary-soft)]">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={src} alt="" className="w-full h-full object-cover" />
-                          <span className="absolute bottom-1 left-1 text-[10px] text-white bg-blue-500/80 px-1.5 py-0.5 rounded">new</span>
-                          <button type="button" onClick={() => removeNewImage(i)}
-                            className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                          </button>
-                        </div>
-                        <input type="text" placeholder="Caption (optional)" value={newPerformanceCaptions[i] ?? ""}
-                          onChange={(e) => { const caps = [...newPerformanceCaptions]; caps[i] = e.target.value; setNewPerformanceCaptions(caps); }}
+                        <input type="text" placeholder="Caption (optional)" value={item.caption}
+                          onChange={(e) => updatePortfolioCaption(item.id, e.target.value)}
                           className="w-full text-xs bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-sm)] px-2 py-1.5" />
                       </div>
                     ))}
