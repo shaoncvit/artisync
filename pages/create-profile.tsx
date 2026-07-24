@@ -344,7 +344,6 @@ export default function CreateProfilePage() {
     if (step === 1 && usernameStatus === "taken") errs.username = "This username is already taken — please choose another.";
     if (step === 1 && usernameStatus === "checking") errs.username = "Still checking username availability — please wait a moment.";
     if (step === 5) {
-      if (!form.phone.trim()) errs.phone = "Phone number is required.";
       if (!form.email.trim()) errs.email = "Email address is required.";
     }
     setStepErrors(errs);
@@ -1017,7 +1016,7 @@ export default function CreateProfilePage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input label="Phone number" type="tel" required value={form.phone} onChange={(e) => update("phone", e.target.value)} error={stepErrors.phone} />
+                <Input label="Phone number" type="tel" optional value={form.phone} onChange={(e) => update("phone", e.target.value)} />
                 <Input label="Email address" type="email" required value={form.email} onChange={(e) => update("email", e.target.value)} error={stepErrors.email} />
               </div>
               <Select label="Preferred contact method" value={form.preferredContactMethod} onChange={(e) => update("preferredContactMethod", e.target.value)}>
