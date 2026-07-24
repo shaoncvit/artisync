@@ -20,7 +20,7 @@ import { useToast } from "@/components/Toast";
 import { generateArtistSummary } from "@/lib/artistSummary";
 import { buildArtistTitle, buildArtistDescription, buildListingTitle, buildListingDescription, LISTING_INDEX_THRESHOLD } from "@/lib/seoMeta";
 import { SITE_URL, SITE_NAME } from "@/lib/siteConfig";
-import { getYouTubeId, isInstagramVideoUrl } from "@/lib/youtube";
+import { getYouTubeId, isInstagramVideoUrl, getInstagramThumbnail } from "@/lib/youtube";
 import { buildArtistJsonLd, serializeJsonLd } from "@/lib/structuredData";
 
 const LISTING_FETCH_LIMIT = 60;
@@ -55,6 +55,38 @@ function PhotoGallery({ urls, captions, artistName }: { urls: string[]; captions
   );
 }
 
+// Thumbnail-style card for an Instagram video link — real post thumbnail with
+// a play-button overlay, matching the look of a YouTube embed preview, since
+// Instagram has no free embeddable player. Falls back to a plain gradient
+// tile if the thumbnail fails to load (e.g. a private or deleted post).
+function InstagramVideoCard({ url }: { url: string }) {
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const thumb = getInstagramThumbnail(url);
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="relative flex items-center justify-center overflow-hidden rounded-[var(--radius-lg)] bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 text-white group"
+      style={{ aspectRatio: "16/9" }}
+    >
+      {thumb && !thumbFailed && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={thumb} alt="" onError={() => setThumbFailed(true)} className="absolute inset-0 w-full h-full object-cover" />
+      )}
+      <div className={`absolute inset-0 ${thumb && !thumbFailed ? "bg-black/25 group-hover:bg-black/35" : ""} transition-colors`} />
+      <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-lg group-hover:scale-105 transition-transform">
+        <svg className="w-6 h-6 text-pink-600 translate-x-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+      </div>
+      <span className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-1.5 text-sm font-semibold">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M12 8.25a3.75 3.75 0 100 7.5 3.75 3.75 0 000-7.5zM16.5 3.75h-9a3.75 3.75 0 00-3.75 3.75v9a3.75 3.75 0 003.75 3.75h9a3.75 3.75 0 003.75-3.75v-9a3.75 3.75 0 00-3.75-3.75z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M16.5 7.5h.008v.008H16.5V7.5z" /></svg>
+        Watch on Instagram
+      </span>
+    </a>
+  );
+}
+
 // ── Video list ───────────────────────────────────────────────────────────────
 function VideoList({ urls, captions }: { urls: string[]; captions?: string[] }) {
   const entries = urls
@@ -71,16 +103,7 @@ function VideoList({ urls, captions }: { urls: string[]; captions?: string[] }) 
               <iframe src={`https://www.youtube.com/embed/${e.vid}?rel=0`} title="Performance video" allowFullScreen className="w-full h-full border-0" loading="lazy" />
             </div>
           ) : (
-            <a
-              href={e.url}
-              target="_blank"
-              rel="noreferrer"
-              className="relative flex flex-col items-center justify-center gap-2 rounded-[var(--radius-lg)] overflow-hidden bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 text-white hover:opacity-90 transition-opacity"
-              style={{ aspectRatio: "16/9" }}
-            >
-              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8.25a3.75 3.75 0 100 7.5 3.75 3.75 0 000-7.5zM16.5 3.75h-9a3.75 3.75 0 00-3.75 3.75v9a3.75 3.75 0 003.75 3.75h9a3.75 3.75 0 003.75-3.75v-9a3.75 3.75 0 00-3.75-3.75z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 7.5h.008v.008H16.5V7.5z" /></svg>
-              <span className="text-sm font-semibold">Watch on Instagram ↗</span>
-            </a>
+            <InstagramVideoCard url={e.url} />
           )}
           {e.caption && <p className="mt-2 text-sm text-[var(--color-text-secondary)]">{e.caption}</p>}
         </div>

@@ -4,7 +4,7 @@ import { supabase, mapArtistRow, type ArtistProfile } from "@/lib/supabaseClient
 import Logo from "@/components/Logo";
 import NoIndexMeta from "@/components/NoIndexMeta";
 import DashboardLink from "@/components/DashboardLink";
-import { isInstagramVideoUrl } from "@/lib/youtube";
+import { isInstagramVideoUrl, getInstagramThumbnail } from "@/lib/youtube";
 
 function getYouTubeId(url: string): string | null {
   if (!url) return null;
@@ -12,7 +12,39 @@ function getYouTubeId(url: string): string | null {
   return m ? m[1] : null;
 }
 
-// ── Instagram video links — shown as simple link-out cards, not embedded ──
+// Thumbnail-style card for an Instagram video link — real post thumbnail
+// with a play-button overlay, since Instagram has no free embeddable player.
+// Falls back to a plain gradient tile if the thumbnail fails to load.
+function InstagramVideoCard({ url, caption }: { url: string; caption?: string }) {
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const thumb = getInstagramThumbnail(url);
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="relative flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 text-white group"
+      style={{ aspectRatio: "16/9" }}
+    >
+      {thumb && !thumbFailed && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={thumb} alt="" onError={() => setThumbFailed(true)} className="absolute inset-0 w-full h-full object-cover" />
+      )}
+      <div className={`absolute inset-0 ${thumb && !thumbFailed ? "bg-black/25 group-hover:bg-black/35" : ""} transition-colors`} />
+      <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-lg group-hover:scale-105 transition-transform">
+        <svg className="w-6 h-6 text-pink-600 translate-x-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+      </div>
+      <span className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-1.5 text-sm font-semibold">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M12 8.25a3.75 3.75 0 100 7.5 3.75 3.75 0 000-7.5zM16.5 3.75h-9a3.75 3.75 0 00-3.75 3.75v9a3.75 3.75 0 003.75 3.75h9a3.75 3.75 0 003.75-3.75v-9a3.75 3.75 0 00-3.75-3.75z" /></svg>
+        Watch on Instagram
+      </span>
+      {caption && <span className="absolute top-2 inset-x-2 text-xs text-white/80 text-center truncate">{caption}</span>}
+    </a>
+  );
+}
+
+// ── Instagram video links — shown as thumbnail cards alongside the YouTube carousel ──
 function InstagramVideoLinks({ urls, captions }: { urls: string[]; captions?: string[] }) {
   const entries = urls
     .map((u, i) => ({ url: u, caption: captions?.[i] ?? "" }))
@@ -22,18 +54,7 @@ function InstagramVideoLinks({ urls, captions }: { urls: string[]; captions?: st
   return (
     <div className="grid sm:grid-cols-2 gap-4">
       {entries.map((e) => (
-        <a
-          key={e.url}
-          href={e.url}
-          target="_blank"
-          rel="noreferrer"
-          className="relative flex flex-col items-center justify-center gap-2 rounded-2xl overflow-hidden bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 text-white hover:opacity-90 transition-opacity"
-          style={{ aspectRatio: "16/9" }}
-        >
-          <svg className="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8.25a3.75 3.75 0 100 7.5 3.75 3.75 0 000-7.5zM16.5 3.75h-9a3.75 3.75 0 00-3.75 3.75v9a3.75 3.75 0 003.75 3.75h9a3.75 3.75 0 003.75-3.75v-9a3.75 3.75 0 00-3.75-3.75z" /></svg>
-          <span className="text-sm font-semibold">Watch on Instagram ↗</span>
-          {e.caption && <span className="text-xs text-white/80 px-3 text-center">{e.caption}</span>}
-        </a>
+        <InstagramVideoCard key={e.url} url={e.url} caption={e.caption} />
       ))}
     </div>
   );

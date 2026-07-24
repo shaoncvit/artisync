@@ -13,3 +13,9 @@ export function getYouTubeThumbnail(url: string): string | null {
 export function isInstagramVideoUrl(url: string): boolean {
   return /instagram\.com\/(reel|p|tv)\//i.test(url);
 }
+
+/** Public per-post thumbnail via Instagram's (undocumented but widely relied upon) media redirect — no API key needed, works for any public post. */
+export function getInstagramThumbnail(url: string): string | null {
+  const m = url.match(/instagram\.com\/(reel|p|tv)\/([A-Za-z0-9_-]+)/i);
+  return m ? `https://www.instagram.com/${m[1]}/${m[2]}/media/?size=l` : null;
+}
