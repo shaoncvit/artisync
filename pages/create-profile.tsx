@@ -167,6 +167,7 @@ export default function CreateProfilePage() {
   const [otherSpecializationSelected, setOtherSpecializationSelected] = useState(false);
   const [locating, setLocating] = useState(false);
   const [locationCaptured, setLocationCaptured] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [profilePhotoLightbox, setProfilePhotoLightbox] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
   const [coverDragOver, setCoverDragOver] = useState(false);
@@ -379,6 +380,7 @@ export default function CreateProfilePage() {
     if (step === 1 && !slugifyUsername(form.username)) errs.username = "Username is required.";
     if (step === 1 && usernameStatus === "taken") errs.username = "This username is already taken — please choose another.";
     if (step === 1 && usernameStatus === "checking") errs.username = "Still checking username availability — please wait a moment.";
+    if (step === 1 && !locationCaptured) errs.location = "Please use the “Use my approximate location” button before continuing — clients rely on this to see distance to you.";
     if (step === 5) {
       if (!form.email.trim()) errs.email = "Email address is required.";
     }
@@ -693,12 +695,14 @@ export default function CreateProfilePage() {
               <Input label="Locality / Area" hint="e.g. Bandra, Koramangala, Salt Lake…" value={form.area} onChange={(e) => update("area", e.target.value)} />
 
               <div>
+                <FieldLabel>Approximate location</FieldLabel>
                 <button
                   type="button"
                   disabled={locating}
                   onClick={() => {
-                    if (!navigator.geolocation) return;
+                    if (!navigator.geolocation) { setLocationError("Your browser doesn't support location access."); return; }
                     setLocating(true);
+                    setLocationError(null);
                     navigator.geolocation.getCurrentPosition(
                       (pos) => {
                         const locationQuery = [form.area, form.city, form.state, "India"].filter(Boolean).join(", ");
@@ -706,7 +710,10 @@ export default function CreateProfilePage() {
                         setLocationCaptured(true);
                         setLocating(false);
                       },
-                      () => setLocating(false),
+                      () => {
+                        setLocating(false);
+                        setLocationError("Couldn't get your location — please allow location access in your browser and try again.");
+                      },
                       { timeout: 10000 }
                     );
                   }}
@@ -717,6 +724,12 @@ export default function CreateProfilePage() {
                 </button>
                 {locationCaptured && (
                   <p className="mt-1.5 text-xs text-[var(--color-success)]">✓ Location captured — this is what lets clients see distance to you.</p>
+                )}
+                {locationError && (
+                  <p className="mt-1.5 text-xs text-[var(--color-error)]">{locationError}</p>
+                )}
+                {stepErrors.location && !locationError && (
+                  <p className="mt-1.5 text-xs text-[var(--color-error)]">{stepErrors.location}</p>
                 )}
                 <p className="mt-1.5 text-xs text-[var(--color-text-secondary)]">We only use this to show clients an approximate distance — never your exact address.</p>
               </div>
