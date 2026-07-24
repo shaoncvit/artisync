@@ -588,13 +588,17 @@ export default function CreateProfilePage() {
                   <button type="button" onClick={() => setProfilePhotoLightbox(false)} aria-label="Close" className="absolute top-4 right-4 text-white/80 hover:text-white">
                     <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={form.profilePicture ? URL.createObjectURL(form.profilePicture) : form.profilePictureUrl}
-                    alt="Profile"
-                    className="max-h-[85vh] max-w-full rounded-[var(--radius-md)] object-contain"
+                  <div
+                    className="w-[min(85vw,85vh)] h-[min(85vw,85vh)] rounded-full overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
-                  />
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={form.profilePicture ? URL.createObjectURL(form.profilePicture) : form.profilePictureUrl}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </div>
               )}
 
