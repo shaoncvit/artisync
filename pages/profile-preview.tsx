@@ -541,54 +541,6 @@ export default function ProfilePreviewPage() {
           </div>
         )}
 
-        {/* ── BOOK CTA ── */}
-        {(profile.phone || profile.email) && (
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-950 via-indigo-900 to-violet-950 px-7 sm:px-12 py-10 sm:py-12">
-            {/* Decorative elements */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-violet-500/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4" />
-
-            <div className="relative flex flex-col sm:flex-row sm:items-center gap-7">
-              <div className="flex-1">
-                <span className="inline-block px-3 py-1 bg-amber-400/20 border border-amber-400/40 text-amber-300 text-xs font-bold rounded-full uppercase tracking-widest mb-3">
-                  Available to Book
-                </span>
-                <h2 className="text-3xl sm:text-4xl font-black text-white leading-tight">{profile.fullName}</h2>
-                {profile.priceRange && (
-                  <p className="mt-2 text-violet-300">
-                    Starting from <span className="text-amber-400 font-black text-xl">₹{profile.priceRange}</span>
-                  </p>
-                )}
-                {profile.eventTypes?.length > 0 && (
-                  <p className="mt-1.5 text-violet-400 text-sm">
-                    {profile.eventTypes.slice(0, 4).join("  ·  ")}{profile.eventTypes.length > 4 ? `  · +${profile.eventTypes.length - 4} more` : ""}
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {profile.phone && (
-                  <a href={`tel:${profile.phone}`}
-                    className="flex items-center gap-2 px-7 py-3.5 bg-amber-400 text-gray-900 rounded-xl font-black text-sm hover:bg-amber-300 transition-all shadow-lg shadow-amber-400/30 hover:shadow-amber-400/50 hover:-translate-y-0.5">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                    Call Now
-                  </a>
-                )}
-                {profile.email && (
-                  <a href={`mailto:${profile.email}`}
-                    className="flex items-center gap-2 px-7 py-3.5 bg-white/10 border border-white/20 text-white rounded-xl font-bold text-sm hover:bg-white/20 transition-all hover:-translate-y-0.5">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    Email
-                  </a>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="h-10" />
       </div>
     </div>
