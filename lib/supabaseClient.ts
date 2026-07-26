@@ -36,6 +36,8 @@ export type ArtistProfile = {
   stageName: string;
   headline: string;
   profilePictureUrl: string;
+  /** Vertical crop offset (0-100) for the profile photo, set by dragging in the profile editor. */
+  profilePicturePositionY: number;
   coverBannerUrl: string;
   /** Vertical crop offset (0-100) for the cover banner, set by dragging in the profile editor. */
   coverBannerPositionY: number;
@@ -97,6 +99,7 @@ export function mapArtistRow(d: any): ArtistProfile {
     stageName: d.stage_name ?? "",
     headline: d.headline ?? "",
     profilePictureUrl: d.profile_picture_url ?? "",
+    profilePicturePositionY: typeof d.profile_picture_position_y === "number" ? d.profile_picture_position_y : 50,
     coverBannerUrl: d.cover_banner_url ?? "",
     coverBannerPositionY: typeof d.cover_banner_position_y === "number" ? d.cover_banner_position_y : 50,
     artForm: d.art_form ?? "",

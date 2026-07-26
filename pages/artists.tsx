@@ -52,14 +52,21 @@ function ArtistCard({ entry, clientId, personalized }: { entry: ArtistEntry; cli
         <div className="relative h-28 rounded-t-[var(--radius-lg)] overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)]">
           {data.coverBannerUrl && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={data.coverBannerUrl} alt="" className="w-full h-full object-cover" />
-          )}
-          {data.profilePictureUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={data.profilePictureUrl} alt={data.fullName} className="absolute bottom-0 left-4 translate-y-1/2 z-10 w-14 h-14 rounded-full border-[3px] border-[var(--color-surface)] object-cover shadow-md" />
+            <img src={data.coverBannerUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${data.coverBannerPositionY ?? 50}%` }} />
           )}
         </div>
       </Link>
+      {/* Sibling of the (overflow-hidden) cover Link, not nested inside it —
+          otherwise the bottom half that hangs below the cover gets clipped. */}
+      {data.profilePictureUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={data.profilePictureUrl}
+          alt={data.fullName}
+          className="absolute bottom-0 left-4 translate-y-1/2 z-10 w-14 h-14 rounded-full border-[3px] border-[var(--color-surface)] object-cover shadow-md"
+          style={{ objectPosition: `center ${data.profilePicturePositionY ?? 50}%` }}
+        />
+      )}
 
       <div className={`px-4 pb-4 ${data.profilePictureUrl ? "pt-10" : "pt-3"}`}>
         {data.artForm && <span className="text-[10px] font-bold text-[var(--color-accent)] uppercase tracking-widest">{data.artForm}</span>}
@@ -78,7 +85,9 @@ function ArtistCard({ entry, clientId, personalized }: { entry: ArtistEntry; cli
         </div>
 
         {data.languages?.length > 0 && <p className="text-xs text-[var(--color-text-secondary)] mt-1 truncate">{data.languages.join(", ")}</p>}
-        {data.availabilityStatus && <Badge variant={data.availabilityStatus === "Available now" ? "success" : "neutral"} className="mt-2">{data.availabilityStatus}</Badge>}
+        {data.availabilityStatus && data.availabilityStatus !== "Not currently available" && (
+          <Badge variant={data.availabilityStatus === "Available now" ? "success" : "neutral"} className="mt-2">{data.availabilityStatus}</Badge>
+        )}
 
         {personalized && match && match.reasons.length > 0 && (
           <div className="mt-3 rounded-[var(--radius-md)] bg-[var(--color-accent-soft)] p-2.5">
@@ -393,7 +402,7 @@ export default function ArtistsPage() {
       <div className="sticky top-0 z-40 bg-[var(--color-surface)]/95 backdrop-blur border-b border-[var(--color-border)]">
         <Container className="flex items-center gap-3 h-14">
           <Logo size="sm" />
-          <div className="flex-1">
+          <div className="hidden sm:block flex-1">
             <input
               type="text"
               value={searchInput}
@@ -402,6 +411,7 @@ export default function ArtistsPage() {
               className="w-full h-9 px-4 bg-[var(--color-primary-soft)] rounded-[var(--radius-md)] text-sm text-[var(--color-text)] placeholder-[var(--color-text-secondary)] border-0 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
             />
           </div>
+          <div className="flex-1 sm:hidden" />
           {clientId ? (
             isArtist ? (
               <ArtistNav active="discover" />
@@ -425,9 +435,18 @@ export default function ArtistsPage() {
             </Link>
           )}
         </Container>
+        <Container className="pb-3 sm:hidden">
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search artists, skills, genres, languages, or locations"
+            className="w-full h-10 px-4 bg-[var(--color-primary-soft)] rounded-[var(--radius-md)] text-sm text-[var(--color-text)] placeholder-[var(--color-text-secondary)] border-0 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+          />
+        </Container>
       </div>
 
-      <Container className="py-8">
+      <Container className="py-8 pb-24 sm:pb-8">
         <h1 className="text-3xl">{personalized ? "Artists recommended for you" : "Discover artists"}</h1>
         {personalized && (
           <p className="mt-2 text-sm text-[var(--color-text-secondary)] inline-flex items-center gap-1.5">

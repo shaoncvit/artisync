@@ -109,7 +109,7 @@ type PortfolioItem = { id: string; caption: string } & (
 
 type FormState = {
   fullName: string; stageName: string; headline: string; username: string;
-  profilePicture: File | null; profilePictureUrl: string;
+  profilePicture: File | null; profilePictureUrl: string; profilePicturePositionY: number;
   coverBanner: File | null; coverBannerUrl: string; coverBannerPositionY: number;
   artForm: string; artSubForms: string[]; skills: string[]; genres: string[]; instruments: string[]; groupType: string;
   bio: string;
@@ -125,7 +125,7 @@ type FormState = {
 
 const EMPTY_FORM: FormState = {
   fullName: "", stageName: "", headline: "", username: "",
-  profilePicture: null, profilePictureUrl: "",
+  profilePicture: null, profilePictureUrl: "", profilePicturePositionY: 50,
   coverBanner: null, coverBannerUrl: "", coverBannerPositionY: 50,
   artForm: "", artSubForms: [], skills: [], genres: [], instruments: [], groupType: "",
   bio: "",
@@ -164,6 +164,7 @@ export default function CreateProfilePage() {
   const [videoThumbnailPreviews, setVideoThumbnailPreviews] = useState<string[]>([]);
   const perfInputRef = useRef<HTMLInputElement>(null);
   const geocodedRef = useRef<{ query: string; lat: number | null; lng: number | null }>({ query: "", lat: null, lng: null });
+  const profileDragState = useRef<{ startY: number; startPos: number; moved: boolean } | null>(null);
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [customSpecialization, setCustomSpecialization] = useState("");
@@ -196,7 +197,9 @@ export default function CreateProfilePage() {
           const loaded: FormState = {
             ...EMPTY_FORM,
             fullName: d.full_name ?? "", stageName: d.stage_name ?? "", headline: d.headline ?? "", username: d.slug ?? "",
-            profilePictureUrl: d.profile_picture_url ?? "", coverBannerUrl: d.cover_banner_url ?? "",
+            profilePictureUrl: d.profile_picture_url ?? "",
+            profilePicturePositionY: typeof d.profile_picture_position_y === "number" ? d.profile_picture_position_y : 50,
+            coverBannerUrl: d.cover_banner_url ?? "",
             coverBannerPositionY: typeof d.cover_banner_position_y === "number" ? d.cover_banner_position_y : 50,
             artForm: d.art_form ?? "", artSubForms: d.art_sub_forms ?? [], skills: d.skills ?? [], genres: d.genres ?? [], instruments: d.instruments ?? [], groupType: d.group_type ?? "",
             bio: d.bio ?? "",
@@ -455,7 +458,8 @@ export default function CreateProfilePage() {
       const { error: dbError } = await supabase.from("artists").upsert({
         id: userId,
         full_name: form.fullName, stage_name: form.stageName, headline: form.headline, slug: slugifyUsername(form.username),
-        profile_picture_url: profilePictureUrl, cover_banner_url: coverBannerUrl, cover_banner_position_y: form.coverBannerPositionY,
+        profile_picture_url: profilePictureUrl, profile_picture_position_y: form.profilePicturePositionY,
+        cover_banner_url: coverBannerUrl, cover_banner_position_y: form.coverBannerPositionY,
         art_form: form.artForm, art_sub_forms: form.artSubForms, skills: form.skills, genres: form.genres, instruments: form.instruments, group_type: form.groupType,
         bio: form.bio,
         state: form.state, city: form.city, area: form.area, country: form.country, travel_preference: form.travelPreference,
@@ -620,15 +624,40 @@ export default function CreateProfilePage() {
                     }`}
                   >
                     {(form.profilePicture || form.profilePictureUrl) ? (
-                      <button
-                        type="button"
-                        onClick={() => setProfilePhotoLightbox(true)}
-                        className="w-full h-full block focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
-                        aria-label="View full profile photo"
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Drag to reposition, or click to view full size"
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setProfilePhotoLightbox(true); } }}
+                        onPointerDown={(e) => {
+                          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                          profileDragState.current = { startY: e.clientY, startPos: form.profilePicturePositionY, moved: false };
+                        }}
+                        onPointerMove={(e) => {
+                          if (!profileDragState.current) return;
+                          const deltaY = e.clientY - profileDragState.current.startY;
+                          if (Math.abs(deltaY) > 4) profileDragState.current.moved = true;
+                          if (!profileDragState.current.moved) return;
+                          const containerHeight = e.currentTarget.clientHeight || 1;
+                          const deltaPercent = (deltaY / containerHeight) * 100;
+                          const next = Math.min(100, Math.max(0, profileDragState.current.startPos - deltaPercent));
+                          update("profilePicturePositionY", next);
+                        }}
+                        onPointerUp={() => {
+                          if (profileDragState.current && !profileDragState.current.moved) setProfilePhotoLightbox(true);
+                          profileDragState.current = null;
+                        }}
+                        className="w-full h-full block cursor-move focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={form.profilePicture ? URL.createObjectURL(form.profilePicture) : form.profilePictureUrl} alt="Profile" className="w-full h-full object-cover" />
-                      </button>
+                        <img
+                          src={form.profilePicture ? URL.createObjectURL(form.profilePicture) : form.profilePictureUrl}
+                          alt="Profile"
+                          draggable={false}
+                          className="w-full h-full object-cover pointer-events-none select-none"
+                          style={{ objectPosition: `center ${form.profilePicturePositionY}%` }}
+                        />
+                      </div>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-[var(--color-text-secondary)]">
                         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -644,7 +673,7 @@ export default function CreateProfilePage() {
                         {form.profilePicture || form.profilePictureUrl ? "Change photo" : "Upload photo"}
                       </span>
                     </label>
-                    <p className="mt-1.5 text-xs text-[var(--color-text-secondary)]">JPG or PNG, up to 5MB. Drag and drop onto the circle, or click it to view full size.</p>
+                    <p className="mt-1.5 text-xs text-[var(--color-text-secondary)]">JPG or PNG, up to 5MB. Drop a file onto the circle to upload, drag the photo itself to reposition, or click it to view full size.</p>
                   </div>
                 </div>
               </div>
