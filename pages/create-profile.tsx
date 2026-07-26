@@ -4,6 +4,7 @@ import { supabase, ARTIST_MEDIA_BUCKET } from "@/lib/supabaseClient";
 import { getArtistProfileCompleteness } from "@/lib/artistProfileCompleteness";
 import { stripOAuthHashIfPresent } from "@/lib/stripOAuthHash";
 import { geocodeLocation } from "@/lib/geocode";
+import { revalidateArtistProfile } from "@/lib/revalidateArtist";
 import { ART_FORMS, EVENT_TYPES, LANGUAGES, INDIA_STATES } from "@/lib/sharedConfig";
 import ArtistOnboardingCard from "@/components/ArtistOnboardingCard";
 import NoIndexMeta from "@/components/NoIndexMeta";
@@ -485,6 +486,7 @@ export default function CreateProfilePage() {
       setVideoThumbnailFiles(resolvedVideoThumbnails.map(() => null));
       setVideoThumbnailPreviews(resolvedVideoThumbnails.map(() => ""));
       setProfileSaved(true); setDirty(false);
+      if (nextStatus === "published") revalidateArtistProfile(slugifyUsername(form.username));
       if (!opts.silent) setSuccessMessage(opts.publish ? "Profile published! Clients can now discover you." : "Draft saved.");
       return true;
     } catch (err: unknown) {

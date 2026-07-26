@@ -18,6 +18,7 @@ import NoIndexMeta from "@/components/NoIndexMeta";
 import { useChat } from "@/components/ChatContext";
 import { useToast } from "@/components/Toast";
 import ArtistNav from "@/components/ArtistNav";
+import { revalidateArtistProfile } from "@/lib/revalidateArtist";
 
 function uniqueSorted(values: (string | undefined | null)[]): string[] {
   return Array.from(new Set(values.filter((v): v is string => !!v && v.trim().length > 0))).sort();
@@ -94,7 +95,10 @@ export default function DashboardPage() {
     setTogglingStatus(true);
     const nextStatus = profile.status === "published" ? "draft" : "published";
     const { error } = await supabase.from("artists").update({ status: nextStatus }).eq("id", userId);
-    if (!error) setProfile((p) => (p ? { ...p, status: nextStatus } : p));
+    if (!error) {
+      setProfile((p) => (p ? { ...p, status: nextStatus } : p));
+      if (profile.slug) revalidateArtistProfile(profile.slug);
+    }
     setTogglingStatus(false);
   }
 
