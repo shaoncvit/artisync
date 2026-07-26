@@ -37,8 +37,7 @@ export default function SignupPage() {
 
   const [emailVerified, setEmailVerified] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
-  const [otpStatus, setOtpStatus] = useState<"idle" | "sending" | "sent" | "verifying" | "cooldown">("idle");
+  const [otpStatus, setOtpStatus] = useState<"idle" | "sending" | "sent" | "cooldown">("idle");
   const [otpError, setOtpError] = useState<string | null>(null);
 
   const [forgotOpen, setForgotOpen] = useState(false);
@@ -55,6 +54,11 @@ export default function SignupPage() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (cancelled) return;
       if (!session?.user) { setCheckingSession(false); return; }
+      // This tab is the one that just opened a verification link — stay put
+      // and show a confirmation instead of whisking it off to the dashboard,
+      // since the original signup tab (which has the password fields) still
+      // needs to finish the flow.
+      if (router.query.verified === "1") { setCheckingSession(false); return; }
       const destination = await resolveEntryPath(session.user.id, role);
       const returnTo = typeof router.query.returnTo === "string" ? router.query.returnTo : undefined;
       if (returnTo && destination === "/artists") {
@@ -74,23 +78,35 @@ export default function SignupPage() {
     setFieldErrors({});
     setEmailVerified(false);
     setOtpSent(false);
-    setOtpCode("");
     setOtpStatus("idle");
     setOtpError(null);
   }, [mode]);
+
+  // Once a verification link has been sent, watch for the session it creates
+  // when clicked — either because it navigated this same tab, or because
+  // Supabase broadcasts the new session to other tabs open on this origin
+  // (e.g. the link opened in a new tab in the same browser).
+  useEffect(() => {
+    if (mode !== "signup" || !otpSent || emailVerified) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user?.email && session.user.email.toLowerCase() === email.toLowerCase()) {
+        setEmailVerified(true);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [mode, otpSent, emailVerified, email]);
 
   function handleEmailChange(e: React.ChangeEvent<HTMLInputElement>) {
     setEmail(e.target.value);
     if (emailVerified || otpSent) {
       setEmailVerified(false);
       setOtpSent(false);
-      setOtpCode("");
       setOtpStatus("idle");
       setOtpError(null);
     }
   }
 
-  async function handleSendCode() {
+  async function handleSendLink() {
     if (!/^\S+@\S+\.\S+$/.test(email)) {
       setOtpError("Enter a valid email address first.");
       return;
@@ -98,35 +114,35 @@ export default function SignupPage() {
     setOtpStatus("sending");
     setOtpError(null);
     try {
-      const { error: otpErr } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: true, emailRedirectTo: `${window.location.origin}/signup?verified=1` },
+      });
       if (otpErr) throw otpErr;
       setOtpSent(true);
       setOtpStatus("cooldown");
       setTimeout(() => setOtpStatus((s) => (s === "cooldown" ? "sent" : s)), 30000);
     } catch (err: unknown) {
-      setOtpError(err instanceof Error ? err.message : "Could not send verification code.");
+      setOtpError(err instanceof Error ? err.message : "Could not send verification link.");
       setOtpStatus("idle");
-    }
-  }
-
-  async function handleVerifyCode(e: React.FormEvent) {
-    e.preventDefault();
-    if (!otpCode.trim()) return;
-    setOtpStatus("verifying");
-    setOtpError(null);
-    try {
-      const { error: verifyErr } = await supabase.auth.verifyOtp({ email, token: otpCode.trim(), type: "email" });
-      if (verifyErr) throw verifyErr;
-      setEmailVerified(true);
-      setOtpError(null);
-    } catch (err: unknown) {
-      setOtpError(err instanceof Error ? err.message : "That code is invalid or has expired.");
-      setOtpStatus("sent");
     }
   }
 
   if (checkingSession) {
     return <div className="min-h-screen" />;
+  }
+
+  if (router.query.verified === "1") {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 text-center">
+        <div className="max-w-sm">
+          <h1 className="text-2xl">Email verified</h1>
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+            Go back to the browser tab where you started creating your account — it should now let you set your password and finish signing up.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   function validate(): boolean {
@@ -295,7 +311,7 @@ export default function SignupPage() {
                       autoComplete="email"
                       value={email}
                       onChange={handleEmailChange}
-                      disabled={emailVerified}
+                      disabled={emailVerified || otpSent}
                       className="w-full min-h-[44px] rounded-[var(--radius-md)] border bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)]
                         placeholder-[var(--color-text-secondary)] transition-colors border-[var(--color-border)] focus:border-[var(--color-accent)]
                         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]
@@ -312,45 +328,26 @@ export default function SignupPage() {
                         variant="outline"
                         size="md"
                         disabled={otpStatus === "sending" || otpStatus === "cooldown" || !email}
-                        onClick={handleSendCode}
+                        onClick={handleSendLink}
                         className="whitespace-nowrap"
                       >
-                        {otpStatus === "sending" ? "Sending…" : otpStatus === "cooldown" ? "Sent" : otpSent ? "Resend code" : "Verify"}
+                        {otpStatus === "sending" ? "Sending…" : otpStatus === "cooldown" ? "Sent" : otpSent ? "Resend link" : "Verify"}
                       </Button>
                     )}
                   </div>
 
                   {otpSent && !emailVerified && (
-                    <div className="mt-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-primary-soft)] p-3">
-                      <p className="text-xs text-[var(--color-text-secondary)] mb-2">
-                        We sent a 6-digit code to <strong>{email}</strong>. Enter it below to verify your email.
+                    <div className="mt-3 flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-primary-soft)] p-3">
+                      <svg className="w-4 h-4 flex-shrink-0 animate-spin text-[var(--color-text-secondary)]" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                      </svg>
+                      <p className="text-xs text-[var(--color-text-secondary)]">
+                        We sent a verification link to <strong>{email}</strong>. Open it in this same browser to continue — this page updates automatically once it&rsquo;s clicked.
                       </p>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          autoComplete="one-time-code"
-                          placeholder="Enter code"
-                          value={otpCode}
-                          onChange={(e) => setOtpCode(e.target.value)}
-                          className="w-full min-h-[40px] rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]
-                            focus:border-[var(--color-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
-                        />
-                        <Button
-                          type="button"
-                          variant="primary"
-                          size="md"
-                          disabled={otpStatus === "verifying" || !otpCode.trim()}
-                          onClick={handleVerifyCode}
-                          className="whitespace-nowrap"
-                        >
-                          {otpStatus === "verifying" ? "Verifying…" : "Verify code"}
-                        </Button>
-                      </div>
-                      {otpError && <p className="mt-1.5 text-xs text-[var(--color-error)]">{otpError}</p>}
                     </div>
                   )}
-                  {!otpSent && otpError && <p className="mt-1.5 text-xs text-[var(--color-error)]">{otpError}</p>}
+                  {otpError && <p className="mt-1.5 text-xs text-[var(--color-error)]">{otpError}</p>}
                 </div>
               ) : (
                 <Input
