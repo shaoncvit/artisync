@@ -48,25 +48,29 @@ function ArtistCard({ entry, clientId, personalized }: { entry: ArtistEntry; cli
 
   return (
     <div className="relative bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] transition-all overflow-visible">
-      <Link href={`/artists/${data.slug || id}`} className="block focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] rounded-t-[var(--radius-lg)]">
-        <div className="relative h-28 rounded-t-[var(--radius-lg)] overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)]">
-          {data.coverBannerUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={data.coverBannerUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${data.coverBannerPositionY ?? 50}%` }} />
-          )}
-        </div>
-      </Link>
-      {/* Sibling of the (overflow-hidden) cover Link, not nested inside it —
-          otherwise the bottom half that hangs below the cover gets clipped. */}
-      {data.profilePictureUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={data.profilePictureUrl}
-          alt={data.fullName}
-          className="absolute bottom-0 left-4 translate-y-1/2 z-10 w-14 h-14 rounded-full border-[3px] border-[var(--color-surface)] object-cover shadow-md"
-          style={{ objectPosition: `center ${data.profilePicturePositionY ?? 50}%` }}
-        />
-      )}
+      {/* This wrapper (not the cover img box itself) is what the avatar's
+          bottom-0 anchors to — it has no overflow-hidden of its own, so the
+          avatar's bottom half isn't clipped, but it's still positioned at
+          the cover/body boundary rather than the bottom of the whole card. */}
+      <div className="relative">
+        <Link href={`/artists/${data.slug || id}`} className="block focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] rounded-t-[var(--radius-lg)]">
+          <div className="relative h-28 rounded-t-[var(--radius-lg)] overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)]">
+            {data.coverBannerUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={data.coverBannerUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${data.coverBannerPositionY ?? 50}%` }} />
+            )}
+          </div>
+        </Link>
+        {data.profilePictureUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={data.profilePictureUrl}
+            alt={data.fullName}
+            className="absolute bottom-0 left-4 translate-y-1/2 z-10 w-14 h-14 rounded-full border-[3px] border-[var(--color-surface)] object-cover shadow-md"
+            style={{ objectPosition: `center ${data.profilePicturePositionY ?? 50}%` }}
+          />
+        )}
+      </div>
 
       <div className={`px-4 pb-4 ${data.profilePictureUrl ? "pt-10" : "pt-3"}`}>
         {data.artForm && <span className="text-[10px] font-bold text-[var(--color-accent)] uppercase tracking-widest">{data.artForm}</span>}
