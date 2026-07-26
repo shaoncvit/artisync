@@ -10,7 +10,6 @@ function makeProfile(overrides: Partial<ArtistProfile> = {}): ArtistProfile {
     stageName: "",
     headline: "Bengali & Hindi vocalist",
     profilePictureUrl: "https://example.com/photo.jpg",
-    profilePicturePositionY: 50,
     coverBannerUrl: "",
     coverBannerPositionY: 50,
     artForm: "Singer",
