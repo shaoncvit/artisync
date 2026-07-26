@@ -15,9 +15,9 @@ function getYouTubeId(url: string): string | null {
 // Thumbnail-style card for an Instagram video link — real post thumbnail
 // with a play-button overlay, since Instagram has no free embeddable player.
 // Falls back to a plain gradient tile if the thumbnail fails to load.
-function InstagramVideoCard({ url, caption }: { url: string; caption?: string }) {
+function InstagramVideoCard({ url, caption, customThumbnail }: { url: string; caption?: string; customThumbnail?: string }) {
   const [thumbFailed, setThumbFailed] = useState(false);
-  const thumb = getInstagramThumbnail(url);
+  const thumb = customThumbnail || getInstagramThumbnail(url);
 
   return (
     <a
@@ -45,16 +45,16 @@ function InstagramVideoCard({ url, caption }: { url: string; caption?: string })
 }
 
 // ── Instagram video links — shown as thumbnail cards alongside the YouTube carousel ──
-function InstagramVideoLinks({ urls, captions }: { urls: string[]; captions?: string[] }) {
+function InstagramVideoLinks({ urls, captions, thumbnails }: { urls: string[]; captions?: string[]; thumbnails?: string[] }) {
   const entries = urls
-    .map((u, i) => ({ url: u, caption: captions?.[i] ?? "" }))
+    .map((u, i) => ({ url: u, caption: captions?.[i] ?? "", thumbnail: thumbnails?.[i] ?? "" }))
     .filter((e) => isInstagramVideoUrl(e.url));
   if (!entries.length) return null;
 
   return (
     <div className="grid sm:grid-cols-2 gap-4">
       {entries.map((e) => (
-        <InstagramVideoCard key={e.url} url={e.url} caption={e.caption} />
+        <InstagramVideoCard key={e.url} url={e.url} caption={e.caption} customThumbnail={e.thumbnail} />
       ))}
     </div>
   );
@@ -451,7 +451,7 @@ export default function ProfilePreviewPage() {
             </div>
             <AutoVideoCarousel urls={videos} captions={profile.youtubeVideoCaptions} />
             <div className="mt-4">
-              <InstagramVideoLinks urls={videos} captions={profile.youtubeVideoCaptions} />
+              <InstagramVideoLinks urls={videos} captions={profile.youtubeVideoCaptions} thumbnails={profile.videoThumbnails} />
             </div>
           </div>
         )}

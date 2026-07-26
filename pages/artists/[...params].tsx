@@ -59,9 +59,9 @@ function PhotoGallery({ urls, captions, artistName }: { urls: string[]; captions
 // a play-button overlay, matching the look of a YouTube embed preview, since
 // Instagram has no free embeddable player. Falls back to a plain gradient
 // tile if the thumbnail fails to load (e.g. a private or deleted post).
-function InstagramVideoCard({ url }: { url: string }) {
+function InstagramVideoCard({ url, customThumbnail }: { url: string; customThumbnail?: string }) {
   const [thumbFailed, setThumbFailed] = useState(false);
-  const thumb = getInstagramThumbnail(url);
+  const thumb = customThumbnail || getInstagramThumbnail(url);
 
   return (
     <a
@@ -88,9 +88,9 @@ function InstagramVideoCard({ url }: { url: string }) {
 }
 
 // ── Video list ───────────────────────────────────────────────────────────────
-function VideoList({ urls, captions }: { urls: string[]; captions?: string[] }) {
+function VideoList({ urls, captions, thumbnails }: { urls: string[]; captions?: string[]; thumbnails?: string[] }) {
   const entries = urls
-    .map((u, i) => ({ url: u, caption: captions?.[i] ?? "", vid: getYouTubeId(u), instagram: isInstagramVideoUrl(u) }))
+    .map((u, i) => ({ url: u, caption: captions?.[i] ?? "", thumbnail: thumbnails?.[i] ?? "", vid: getYouTubeId(u), instagram: isInstagramVideoUrl(u) }))
     .filter((e) => e.vid || e.instagram)
     // YouTube first — Instagram links are the fallback, not the preferred format.
     .sort((a, b) => Number(!!b.vid) - Number(!!a.vid));
@@ -105,7 +105,7 @@ function VideoList({ urls, captions }: { urls: string[]; captions?: string[] }) 
               <iframe src={`https://www.youtube.com/embed/${e.vid}?rel=0`} title="Performance video" allowFullScreen className="w-full h-full border-0" loading="lazy" />
             </div>
           ) : (
-            <InstagramVideoCard url={e.url} />
+            <InstagramVideoCard url={e.url} customThumbnail={e.thumbnail} />
           )}
           {e.caption && <p className="mt-2 text-sm text-[var(--color-text-secondary)]">{e.caption}</p>}
         </div>
@@ -453,7 +453,7 @@ function ArtistProfileView({ profile }: { profile: ArtistProfile }) {
           {videos.length > 0 && (
             <section>
               <SectionHeading>Performance videos</SectionHeading>
-              <VideoList urls={videos} captions={profile.youtubeVideoCaptions} />
+              <VideoList urls={videos} captions={profile.youtubeVideoCaptions} thumbnails={profile.videoThumbnails} />
             </section>
           )}
 

@@ -113,7 +113,7 @@ type FormState = {
   artForm: string; artSubForms: string[]; skills: string[]; genres: string[]; instruments: string[]; groupType: string;
   bio: string;
   state: string; city: string; area: string; country: string; travelPreference: string;
-  youtubeVideos: string[]; youtubeVideoCaptions: string[];
+  youtubeVideos: string[]; youtubeVideoCaptions: string[]; videoThumbnails: string[];
   performanceImageUrls: string[]; performanceImageCaptions: string[];
   experience: string; languages: string[]; eventTypes: string[];
   availabilityStatus: string; workMode: string; bookingTypes: string[];
@@ -129,7 +129,7 @@ const EMPTY_FORM: FormState = {
   artForm: "", artSubForms: [], skills: [], genres: [], instruments: [], groupType: "",
   bio: "",
   state: "", city: "", area: "", country: "India", travelPreference: "",
-  youtubeVideos: [""], youtubeVideoCaptions: [""],
+  youtubeVideos: [""], youtubeVideoCaptions: [""], videoThumbnails: [""],
   performanceImageUrls: [], performanceImageCaptions: [],
   experience: "", languages: [], eventTypes: [],
   availabilityStatus: "", workMode: "", bookingTypes: [],
@@ -159,6 +159,8 @@ export default function CreateProfilePage() {
   const [draggedPortfolioIndex, setDraggedPortfolioIndex] = useState<number | null>(null);
   const [portfolioDragOver, setPortfolioDragOver] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [videoThumbnailFiles, setVideoThumbnailFiles] = useState<(File | null)[]>([]);
+  const [videoThumbnailPreviews, setVideoThumbnailPreviews] = useState<string[]>([]);
   const perfInputRef = useRef<HTMLInputElement>(null);
   const geocodedRef = useRef<{ query: string; lat: number | null; lng: number | null }>({ query: "", lat: null, lng: null });
 
@@ -203,6 +205,11 @@ export default function CreateProfilePage() {
               const vids: string[] = d.youtube_videos?.length ? d.youtube_videos : [""];
               const caps: string[] = d.youtube_video_captions ?? [];
               return vids.map((_: string, i: number) => caps[i] ?? "");
+            })(),
+            videoThumbnails: (() => {
+              const vids: string[] = d.youtube_videos?.length ? d.youtube_videos : [""];
+              const thumbs: string[] = d.video_thumbnails ?? [];
+              return vids.map((_: string, i: number) => thumbs[i] ?? "");
             })(),
             performanceImageUrls: d.performance_image_urls ?? [],
             performanceImageCaptions: d.performance_image_captions ?? [],
@@ -417,11 +424,20 @@ export default function CreateProfilePage() {
       const allPerformanceUrls = uploadedPortfolio.map((p) => p.url);
       const allPerformanceCaptions = uploadedPortfolio.map((p) => p.caption);
 
-      const filteredVideos = form.youtubeVideos.filter((v) => v.trim());
-      const filteredVideoCaptions = form.youtubeVideos
-        .map((v, i) => ({ keep: !!v.trim(), cap: form.youtubeVideoCaptions[i] ?? "" }))
-        .filter((x) => x.keep)
-        .map((x) => x.cap);
+      if (videoThumbnailFiles.some((f) => f)) setUploadingMedia(true);
+      const resolvedVideoThumbnails = await Promise.all(
+        form.videoThumbnails.map((existing, i) => {
+          const pending = videoThumbnailFiles[i];
+          if (!pending) return Promise.resolve(existing ?? "");
+          return uploadFile(pending, `${userId}/video_thumb_${Date.now()}_${i}.${pending.name.split(".").pop()}`);
+        })
+      );
+      setUploadingMedia(false);
+
+      const keptVideoIndexes = form.youtubeVideos.map((v, i) => (v.trim() ? i : -1)).filter((i) => i !== -1);
+      const filteredVideos = keptVideoIndexes.map((i) => form.youtubeVideos[i]);
+      const filteredVideoCaptions = keptVideoIndexes.map((i) => form.youtubeVideoCaptions[i] ?? "");
+      const filteredVideoThumbnails = keptVideoIndexes.map((i) => resolvedVideoThumbnails[i] ?? "");
 
       const nextStatus: "draft" | "published" = opts.publish ? "published" : form.status;
 
@@ -445,6 +461,7 @@ export default function CreateProfilePage() {
         latitude: geocodedRef.current.lat, longitude: geocodedRef.current.lng,
         youtube_videos: filteredVideos,
         youtube_video_captions: filteredVideoCaptions,
+        video_thumbnails: filteredVideoThumbnails,
         performance_image_urls: allPerformanceUrls,
         performance_image_captions: allPerformanceCaptions,
         experience: form.experience, languages: form.languages, event_types: form.eventTypes,
@@ -457,8 +474,16 @@ export default function CreateProfilePage() {
       });
       if (dbError) throw dbError;
 
-      setForm((p) => ({ ...p, profilePicture: null, coverBanner: null, profilePictureUrl, coverBannerUrl, performanceImageUrls: allPerformanceUrls, performanceImageCaptions: allPerformanceCaptions, status: nextStatus }));
+      setForm((p) => ({
+        ...p, profilePicture: null, coverBanner: null, profilePictureUrl, coverBannerUrl,
+        performanceImageUrls: allPerformanceUrls, performanceImageCaptions: allPerformanceCaptions,
+        videoThumbnails: resolvedVideoThumbnails,
+        status: nextStatus,
+      }));
       setPortfolioItems(allPerformanceUrls.map((url, i) => ({ id: url, kind: "saved", url, caption: allPerformanceCaptions[i] ?? "" })));
+      videoThumbnailPreviews.forEach((url) => { if (url) URL.revokeObjectURL(url); });
+      setVideoThumbnailFiles(resolvedVideoThumbnails.map(() => null));
+      setVideoThumbnailPreviews(resolvedVideoThumbnails.map(() => ""));
       setProfileSaved(true); setDirty(false);
       if (!opts.silent) setSuccessMessage(opts.publish ? "Profile published! Clients can now discover you." : "Draft saved.");
       return true;
@@ -970,7 +995,13 @@ export default function CreateProfilePage() {
                 <div className="flex items-center justify-between mb-3">
                   <FieldLabel optional>Video links (YouTube preferred)</FieldLabel>
                   {form.youtubeVideos.length < 6 && (
-                    <button type="button" onClick={() => { update("youtubeVideos", [...form.youtubeVideos, ""]); update("youtubeVideoCaptions", [...form.youtubeVideoCaptions, ""]); }}
+                    <button type="button" onClick={() => {
+                      update("youtubeVideos", [...form.youtubeVideos, ""]);
+                      update("youtubeVideoCaptions", [...form.youtubeVideoCaptions, ""]);
+                      update("videoThumbnails", [...form.videoThumbnails, ""]);
+                      setVideoThumbnailFiles((p) => [...p, null]);
+                      setVideoThumbnailPreviews((p) => [...p, ""]);
+                    }}
                       className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)]">
                       + Add video
                     </button>
@@ -998,7 +1029,14 @@ export default function CreateProfilePage() {
                           {valid && <span className="text-xs text-[var(--color-success)] font-medium flex-shrink-0">✓ valid</span>}
                           {!valid && url && <span className="text-xs text-[var(--color-error)] flex-shrink-0">invalid</span>}
                           {form.youtubeVideos.length > 1 && (
-                            <button type="button" onClick={() => { update("youtubeVideos", form.youtubeVideos.filter((_, j) => j !== i)); update("youtubeVideoCaptions", form.youtubeVideoCaptions.filter((_, j) => j !== i)); }}
+                            <button type="button" onClick={() => {
+                              update("youtubeVideos", form.youtubeVideos.filter((_, j) => j !== i));
+                              update("youtubeVideoCaptions", form.youtubeVideoCaptions.filter((_, j) => j !== i));
+                              update("videoThumbnails", form.videoThumbnails.filter((_, j) => j !== i));
+                              if (videoThumbnailPreviews[i]) URL.revokeObjectURL(videoThumbnailPreviews[i]);
+                              setVideoThumbnailFiles((p) => p.filter((_, j) => j !== i));
+                              setVideoThumbnailPreviews((p) => p.filter((_, j) => j !== i));
+                            }}
                               className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] flex-shrink-0">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
@@ -1009,6 +1047,38 @@ export default function CreateProfilePage() {
                             onChange={(e) => { const v = [...form.youtubeVideoCaptions]; v[i] = e.target.value; update("youtubeVideoCaptions", v); }}
                             className="w-full text-xs bg-transparent border-none outline-none" />
                         </div>
+                        {isInstagramVideoUrl(url) && (
+                          <div className="px-4 pb-3 border-t border-[var(--color-border)] pt-3 flex items-center gap-3">
+                            {(videoThumbnailPreviews[i] || form.videoThumbnails[i]) ? (
+                              <div className="relative w-16 h-16 rounded-[var(--radius-md)] overflow-hidden bg-[var(--color-primary-soft)] flex-shrink-0">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={videoThumbnailPreviews[i] || form.videoThumbnails[i]} alt="" className="w-full h-full object-cover" />
+                              </div>
+                            ) : (
+                              <div className="w-16 h-16 rounded-[var(--radius-md)] bg-[var(--color-primary-soft)] flex items-center justify-center flex-shrink-0 text-[var(--color-text-secondary)]">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 7.5h18M3 7.5a2.25 2.25 0 01-2.25-2.25M3 7.5v10.5A2.25 2.25 0 005.25 20.25h13.5A2.25 2.25 0 0021 18V7.5m-18 0V6a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 6v1.5" /></svg>
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <label className="inline-flex cursor-pointer items-center rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold hover:bg-[var(--color-primary-soft)]">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    setVideoThumbnailFiles((p) => { const next = [...p]; next[i] = file; return next; });
+                                    setVideoThumbnailPreviews((p) => { const next = [...p]; next[i] = URL.createObjectURL(file); return next; });
+                                    setDirty(true);
+                                  }}
+                                />
+                                {(videoThumbnailPreviews[i] || form.videoThumbnails[i]) ? "Change thumbnail" : "Add a thumbnail"}
+                              </label>
+                              <p className="mt-1 text-[10px] text-[var(--color-text-secondary)]">Instagram links can&apos;t auto-fetch a thumbnail — upload one so this looks as good as a YouTube video.</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}

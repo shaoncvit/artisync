@@ -53,6 +53,8 @@ export type ArtistProfile = {
   travelPreference: string;
   youtubeVideos: string[];
   youtubeVideoCaptions?: string[];
+  /** Custom thumbnail per video link (index-aligned with youtubeVideos) — mainly for Instagram links, which have no reliable public thumbnail. */
+  videoThumbnails?: string[];
   performanceImageUrls: string[];
   performanceImageCaptions?: string[];
   phone: string;
@@ -111,6 +113,7 @@ export function mapArtistRow(d: any): ArtistProfile {
     travelPreference: d.travel_preference ?? "",
     youtubeVideos: d.youtube_videos ?? [],
     youtubeVideoCaptions: d.youtube_video_captions ?? [],
+    videoThumbnails: d.video_thumbnails ?? [],
     performanceImageUrls: d.performance_image_urls ?? [],
     performanceImageCaptions: d.performance_image_captions ?? [],
     phone: d.phone ?? "",
