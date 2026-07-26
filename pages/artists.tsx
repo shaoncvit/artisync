@@ -45,6 +45,8 @@ function ArtistCard({ entry, clientId, personalized }: { entry: ArtistEntry; cli
   const { id, data, match, distanceKm } = entry;
   const locationParts = [data.city, data.state].filter(Boolean);
   const specializations = [...(data.artSubForms ?? []), ...(data.skills ?? [])].slice(0, 3);
+  const [photoZoomed, setPhotoZoomed] = useState(false);
+  const displayName = data.fullName || data.stageName || "Artist";
 
   return (
     <div className="relative bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] transition-all overflow-visible">
@@ -52,16 +54,34 @@ function ArtistCard({ entry, clientId, personalized }: { entry: ArtistEntry; cli
         <div className="relative h-28 rounded-t-[var(--radius-lg)] overflow-hidden bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)]">
           {data.coverBannerUrl && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={data.coverBannerUrl} alt="" className="w-full h-full object-cover" />
-          )}
-          {data.profilePictureUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={data.profilePictureUrl} alt={data.fullName} className="absolute bottom-0 left-4 translate-y-1/2 z-10 w-14 h-14 rounded-full border-[3px] border-[var(--color-surface)] object-cover shadow-md" />
+            <img src={data.coverBannerUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${data.coverBannerPositionY ?? 50}%` }} />
           )}
         </div>
       </Link>
+      {data.profilePictureUrl && (
+        <button
+          type="button"
+          onClick={() => setPhotoZoomed(true)}
+          aria-label={`View ${displayName}'s photo`}
+          className="absolute bottom-0 left-4 translate-y-1/2 z-10 w-20 h-20 rounded-full border-[3px] border-[var(--color-surface)] overflow-hidden shadow-md hover:scale-105 transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={data.profilePictureUrl} alt={displayName} className="w-full h-full object-cover" style={{ objectPosition: `center ${data.profilePicturePositionY ?? 50}%` }} />
+        </button>
+      )}
+      {photoZoomed && data.profilePictureUrl && (
+        <div className="fixed inset-0 z-[60] bg-black/85 flex items-center justify-center p-4" onClick={() => setPhotoZoomed(false)}>
+          <button type="button" onClick={() => setPhotoZoomed(false)} aria-label="Close" className="absolute top-4 right-4 text-white/80 hover:text-white">
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+          <div className="w-[min(85vw,85vh)] h-[min(85vw,85vh)] rounded-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={data.profilePictureUrl} alt={displayName} className="w-full h-full object-cover" />
+          </div>
+        </div>
+      )}
 
-      <div className={`px-4 pb-4 ${data.profilePictureUrl ? "pt-10" : "pt-3"}`}>
+      <div className={`px-4 pb-4 ${data.profilePictureUrl ? "pt-14" : "pt-3"}`}>
         {data.artForm && <span className="text-[10px] font-bold text-[var(--color-accent)] uppercase tracking-widest">{data.artForm}</span>}
         <Link href={`/artists/${data.slug || id}`} className="block focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)] rounded-sm">
           <h3 className="font-bold text-[var(--color-text)] text-base leading-tight mt-0.5 truncate">{data.fullName || data.stageName || "Artist"}</h3>
@@ -393,7 +413,7 @@ export default function ArtistsPage() {
       <div className="sticky top-0 z-40 bg-[var(--color-surface)]/95 backdrop-blur border-b border-[var(--color-border)]">
         <Container className="flex items-center gap-3 h-14">
           <Logo size="sm" />
-          <div className="flex-1">
+          <div className="hidden sm:block flex-1">
             <input
               type="text"
               value={searchInput}
@@ -402,6 +422,7 @@ export default function ArtistsPage() {
               className="w-full h-9 px-4 bg-[var(--color-primary-soft)] rounded-[var(--radius-md)] text-sm text-[var(--color-text)] placeholder-[var(--color-text-secondary)] border-0 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
             />
           </div>
+          <div className="flex-1 sm:hidden" />
           {clientId ? (
             isArtist ? (
               <ArtistNav active="discover" />
@@ -426,6 +447,16 @@ export default function ArtistsPage() {
           )}
         </Container>
       </div>
+
+      <Container className="pt-4 sm:hidden">
+        <input
+          type="text"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Search artists, skills, genres, languages, or locations"
+          className="w-full h-10 px-4 bg-[var(--color-primary-soft)] rounded-[var(--radius-md)] text-sm text-[var(--color-text)] placeholder-[var(--color-text-secondary)] border-0 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+        />
+      </Container>
 
       <Container className="py-8">
         <h1 className="text-3xl">{personalized ? "Artists recommended for you" : "Discover artists"}</h1>

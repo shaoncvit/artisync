@@ -359,7 +359,8 @@ function ArtistProfileView({ profile }: { profile: ArtistProfile }) {
         </div>
         {profile.profilePictureUrl && (
           <Image src={profile.profilePictureUrl} alt={displayName} width={160} height={160} priority
-            className="absolute bottom-0 left-5 sm:left-10 translate-y-1/2 z-10 w-32 h-32 sm:w-40 sm:h-40 rounded-full object-cover border-4 border-[var(--color-page)] shadow-xl" />
+            className="absolute bottom-0 left-5 sm:left-10 translate-y-1/2 z-10 w-32 h-32 sm:w-40 sm:h-40 rounded-full object-cover border-4 border-[var(--color-page)] shadow-xl"
+            style={{ objectPosition: `center ${profile.profilePicturePositionY}%` }} />
         )}
       </div>
 
@@ -611,7 +612,8 @@ function ListingView({ category, city, artists, totalCount, indexable }: Listing
                 <Card key={artist.id} href={`/artists/${artist.slug || artist.id}`} className="p-4">
                   <div className="flex items-center gap-3">
                     {artist.profilePictureUrl && (
-                      <Image src={artist.profilePictureUrl} alt={artist.fullName || artist.stageName} width={48} height={48} loading="lazy" className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
+                      <Image src={artist.profilePictureUrl} alt={artist.fullName || artist.stageName} width={48} height={48} loading="lazy" className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                        style={{ objectPosition: `center ${artist.profilePicturePositionY}%` }} />
                     )}
                     <div className="min-w-0">
                       <p className="font-semibold text-[var(--color-text)] truncate">{artist.stageName || artist.fullName || "Artist"}</p>

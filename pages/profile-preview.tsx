@@ -317,7 +317,8 @@ export default function ProfilePreviewPage() {
           <img
             src={profile.profilePictureUrl}
             alt={profile.fullName}
-            className="absolute bottom-0 left-5 sm:left-10 lg:left-14 translate-y-1/2 z-10 w-36 h-36 sm:w-44 sm:h-44 rounded-full object-cover object-center border-4 border-white shadow-2xl"
+            className="absolute bottom-0 left-5 sm:left-10 lg:left-14 translate-y-1/2 z-10 w-36 h-36 sm:w-44 sm:h-44 rounded-full object-cover border-4 border-white shadow-2xl"
+            style={{ objectPosition: `center ${profile.profilePicturePositionY}%` }}
           />
         )}
       </div>
