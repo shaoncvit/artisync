@@ -19,6 +19,7 @@ export default function AppHeader() {
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string>("");
   const [dashboardHref, setDashboardHref] = useState<string | null>(null);
+  const [profileHref, setProfileHref] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,26 +31,29 @@ export default function AppHeader() {
         setDisplayName(artistRow.stage_name || artistRow.full_name || "Artist");
         setPhotoUrl(artistRow.profile_picture_url || "");
         setDashboardHref("/dashboard");
+        setProfileHref("/create-profile");
         return;
       }
-      const { data: clientRow } = await supabase.from("clients").select("full_name").eq("id", uid).maybeSingle();
+      const { data: clientRow } = await supabase.from("clients").select("full_name, profile_picture_url").eq("id", uid).maybeSingle();
       if (cancelled) return;
       if (clientRow) {
         setDisplayName(clientRow.full_name || "Client");
-        setPhotoUrl("");
+        setPhotoUrl(clientRow.profile_picture_url || "");
         setDashboardHref("/artists");
+        setProfileHref("/client-profile");
         return;
       }
       setDisplayName(null);
       setPhotoUrl("");
       setDashboardHref(null);
+      setProfileHref(null);
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const uid = session?.user?.id ?? null;
       setUserId(uid);
       if (uid) loadProfile(uid);
-      else { setDisplayName(null); setPhotoUrl(""); setDashboardHref(null); }
+      else { setDisplayName(null); setPhotoUrl(""); setDashboardHref(null); setProfileHref(null); }
     });
     return () => { cancelled = true; subscription.unsubscribe(); };
   }, []);
@@ -116,6 +120,9 @@ export default function AppHeader() {
                   {dashboardHref && (
                     <a href={dashboardHref} className="block px-4 py-2.5 text-sm text-[var(--color-text)] hover:bg-[var(--color-primary-soft)]">Dashboard</a>
                   )}
+                  {profileHref && (
+                    <a href={profileHref} className="block px-4 py-2.5 text-sm text-[var(--color-text)] hover:bg-[var(--color-primary-soft)]">My Profile</a>
+                  )}
                   <button type="button" onClick={handleSignOut} className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-text)] hover:bg-[var(--color-primary-soft)]">Sign out</button>
                 </div>
               )}
@@ -168,6 +175,16 @@ export default function AppHeader() {
                   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
               >
                 Dashboard
+              </a>
+            )}
+            {profileHref && (
+              <a
+                href={profileHref}
+                onClick={() => setOpen(false)}
+                className="rounded-[var(--radius-md)] px-3 py-3 text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-primary-soft)]
+                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+              >
+                My Profile
               </a>
             )}
             <div className="mt-2 flex flex-col gap-2 px-1">

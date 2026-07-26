@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import { supabase, mapArtistRow, type ArtistProfile } from "@/lib/supabaseClient";
 import { getArtistProfileCompleteness } from "@/lib/artistProfileCompleteness";
 import { stripOAuthHashIfPresent } from "@/lib/stripOAuthHash";
@@ -253,7 +254,9 @@ export default function DashboardPage() {
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
                             <p className="font-semibold text-[var(--color-text)]">{job.title}</p>
-                            <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Posted by {job.client_name}</p>
+                            <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                              Posted by <Link href={`/clients/${job.client_id}`} className="font-semibold hover:text-[var(--color-text)] hover:underline">{job.client_name}</Link>
+                            </p>
                             <p className="text-sm text-[var(--color-text-secondary)] mt-0.5">
                               {job.art_form}{job.event_type ? ` · ${job.event_type}` : ""} · {formatJobLocation(job)}
                             </p>
@@ -358,7 +361,7 @@ export default function DashboardPage() {
         {applyJob && (
           <form onSubmit={submitApplication} className="space-y-4">
             <p className="text-sm text-[var(--color-text-secondary)]">
-              Posted by {applyJob.client_name} · {formatBudget(applyJob)} · {formatJobLocation(applyJob)}
+              Posted by <Link href={`/clients/${applyJob.client_id}`} className="font-semibold hover:text-[var(--color-text)] hover:underline">{applyJob.client_name}</Link> · {formatBudget(applyJob)} · {formatJobLocation(applyJob)}
             </p>
             <Input
               label="Your rate"

@@ -430,6 +430,9 @@ export default function ArtistsPage() {
                 )}
                 <button type="button" onClick={openPanel} className="flex-shrink-0 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)]">Messages</button>
                 <Link href="/saved-artists" className="hidden sm:inline-block flex-shrink-0 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)]">Saved</Link>
+                {isClient && (
+                  <Link href="/client-profile" className="hidden sm:inline-block flex-shrink-0 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)]">Profile</Link>
+                )}
                 <button onClick={() => supabase.auth.signOut().then(() => router.replace("/"))} className="flex-shrink-0 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)]">Sign out</button>
               </>
             )
