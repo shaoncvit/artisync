@@ -35,6 +35,12 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpStatus, setOtpStatus] = useState<"idle" | "sending" | "sent" | "verifying" | "cooldown">("idle");
+  const [otpError, setOtpError] = useState<string | null>(null);
+
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotStatus, setForgotStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -66,7 +72,58 @@ export default function SignupPage() {
   useEffect(() => {
     setError(null);
     setFieldErrors({});
+    setEmailVerified(false);
+    setOtpSent(false);
+    setOtpCode("");
+    setOtpStatus("idle");
+    setOtpError(null);
   }, [mode]);
+
+  function handleEmailChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setEmail(e.target.value);
+    if (emailVerified || otpSent) {
+      setEmailVerified(false);
+      setOtpSent(false);
+      setOtpCode("");
+      setOtpStatus("idle");
+      setOtpError(null);
+    }
+  }
+
+  async function handleSendCode() {
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setOtpError("Enter a valid email address first.");
+      return;
+    }
+    setOtpStatus("sending");
+    setOtpError(null);
+    try {
+      const { error: otpErr } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+      if (otpErr) throw otpErr;
+      setOtpSent(true);
+      setOtpStatus("cooldown");
+      setTimeout(() => setOtpStatus((s) => (s === "cooldown" ? "sent" : s)), 30000);
+    } catch (err: unknown) {
+      setOtpError(err instanceof Error ? err.message : "Could not send verification code.");
+      setOtpStatus("idle");
+    }
+  }
+
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (!otpCode.trim()) return;
+    setOtpStatus("verifying");
+    setOtpError(null);
+    try {
+      const { error: verifyErr } = await supabase.auth.verifyOtp({ email, token: otpCode.trim(), type: "email" });
+      if (verifyErr) throw verifyErr;
+      setEmailVerified(true);
+      setOtpError(null);
+    } catch (err: unknown) {
+      setOtpError(err instanceof Error ? err.message : "That code is invalid or has expired.");
+      setOtpStatus("sent");
+    }
+  }
 
   if (checkingSession) {
     return <div className="min-h-screen" />;
@@ -90,11 +147,15 @@ export default function SignupPage() {
     e.preventDefault();
     setError(null);
     if (!validate()) return;
+    if (mode === "signup" && !emailVerified) {
+      setError("Please verify your email address first.");
+      return;
+    }
     setLoading(true);
     try {
       const { data, error: authError } =
         mode === "signup"
-          ? await supabase.auth.signUp({ email, password })
+          ? await supabase.auth.updateUser({ password })
           : await supabase.auth.signInWithPassword({ email, password });
       if (authError) throw authError;
 
@@ -221,14 +282,86 @@ export default function SignupPage() {
             <p className="mt-2 text-sm text-[var(--color-text-secondary)]">{supporting}</p>
 
             <form onSubmit={handleEmailAuth} className="mt-6 space-y-4" noValidate>
-              <Input
-                label="Email address"
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+              {mode === "signup" ? (
+                <div>
+                  <label htmlFor="signup-email" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+                    Email address
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="signup-email"
+                      type="email"
+                      required
+                      autoComplete="email"
+                      value={email}
+                      onChange={handleEmailChange}
+                      disabled={emailVerified}
+                      className="w-full min-h-[44px] rounded-[var(--radius-md)] border bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)]
+                        placeholder-[var(--color-text-secondary)] transition-colors border-[var(--color-border)] focus:border-[var(--color-accent)]
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]
+                        disabled:opacity-70 disabled:bg-[var(--color-primary-soft)]"
+                    />
+                    {emailVerified ? (
+                      <span className="flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-md)] bg-[var(--color-success-soft)] px-3 text-sm font-semibold text-[var(--color-success)]">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        Verified
+                      </span>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="md"
+                        disabled={otpStatus === "sending" || otpStatus === "cooldown" || !email}
+                        onClick={handleSendCode}
+                        className="whitespace-nowrap"
+                      >
+                        {otpStatus === "sending" ? "Sending…" : otpStatus === "cooldown" ? "Sent" : otpSent ? "Resend code" : "Verify"}
+                      </Button>
+                    )}
+                  </div>
+
+                  {otpSent && !emailVerified && (
+                    <div className="mt-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-primary-soft)] p-3">
+                      <p className="text-xs text-[var(--color-text-secondary)] mb-2">
+                        We sent a 6-digit code to <strong>{email}</strong>. Enter it below to verify your email.
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          placeholder="Enter code"
+                          value={otpCode}
+                          onChange={(e) => setOtpCode(e.target.value)}
+                          className="w-full min-h-[40px] rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]
+                            focus:border-[var(--color-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+                        />
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="md"
+                          disabled={otpStatus === "verifying" || !otpCode.trim()}
+                          onClick={handleVerifyCode}
+                          className="whitespace-nowrap"
+                        >
+                          {otpStatus === "verifying" ? "Verifying…" : "Verify code"}
+                        </Button>
+                      </div>
+                      {otpError && <p className="mt-1.5 text-xs text-[var(--color-error)]">{otpError}</p>}
+                    </div>
+                  )}
+                  {!otpSent && otpError && <p className="mt-1.5 text-xs text-[var(--color-error)]">{otpError}</p>}
+                </div>
+              ) : (
+                <Input
+                  label="Email address"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              )}
 
               <PasswordInput
                 label="Password"
@@ -238,6 +371,7 @@ export default function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 error={fieldErrors.password}
                 hint={mode === "signup" ? `At least ${MIN_PASSWORD_LENGTH} characters.` : undefined}
+                disabled={mode === "signup" && !emailVerified}
               />
 
               {mode === "signup" && (
@@ -248,6 +382,7 @@ export default function SignupPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   error={fieldErrors.confirmPassword}
+                  disabled={!emailVerified}
                 />
               )}
 
