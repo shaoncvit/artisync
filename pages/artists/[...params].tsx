@@ -228,6 +228,7 @@ function ArtistProfileView({ profile }: { profile: ArtistProfile }) {
   const { openConversationWithArtist } = useChat();
   const [userId, setUserId] = useState<string | null>(null);
   const [messaging, setMessaging] = useState(false);
+  const [photoZoomed, setPhotoZoomed] = useState(false);
   const isOwnProfile = !!userId && userId === profile.id;
 
   useEffect(() => {
@@ -358,9 +359,33 @@ function ArtistProfileView({ profile }: { profile: ArtistProfile }) {
           )}
         </div>
         {profile.profilePictureUrl && (
-          <Image src={profile.profilePictureUrl} alt={displayName} width={160} height={160} priority
-            className="absolute bottom-0 left-5 sm:left-10 translate-y-1/2 z-10 w-32 h-32 sm:w-40 sm:h-40 rounded-full object-cover border-4 border-[var(--color-page)] shadow-xl"
-            style={{ objectPosition: `center ${profile.profilePicturePositionY}%` }} />
+          <button
+            type="button"
+            aria-label="Click to zoom profile picture"
+            onClick={() => setPhotoZoomed(true)}
+            className="absolute bottom-0 left-5 sm:left-10 translate-y-1/2 z-10 w-32 h-32 sm:w-40 sm:h-40 rounded-full cursor-zoom-in"
+          >
+            <Image src={profile.profilePictureUrl} alt={displayName} width={160} height={160} priority
+              className="w-full h-full rounded-full object-cover border-4 border-[var(--color-page)] shadow-xl"
+              style={{ objectPosition: `center ${profile.profilePicturePositionY}%` }} />
+          </button>
+        )}
+
+        {photoZoomed && profile.profilePictureUrl && (
+          <div className="fixed inset-0 z-[60] bg-black/85 flex items-center justify-center p-4" onClick={() => setPhotoZoomed(false)}>
+            <button type="button" onClick={() => setPhotoZoomed(false)} aria-label="Close" className="absolute top-4 right-4 text-white/80 hover:text-white">
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <div className="w-[min(85vw,85vh)] h-[min(85vw,85vh)] rounded-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={profile.profilePictureUrl}
+                alt={displayName}
+                className="w-full h-full object-cover"
+                style={{ objectPosition: `center ${profile.profilePicturePositionY}%` }}
+              />
+            </div>
+          </div>
         )}
       </div>
 

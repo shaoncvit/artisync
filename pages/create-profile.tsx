@@ -246,7 +246,10 @@ export default function CreateProfilePage() {
           const requestedStep = Number(router.query.step);
           const startStep = requestedStep >= 1 && requestedStep <= STEP_LABELS.length ? requestedStep : (nextIncompleteSection ?? 1);
           setCurrentStep(startStep);
-          setFurthestStep((f) => Math.max(f, startStep));
+          // Already has a saved profile — every section already has real
+          // data in it, so let them jump straight to any step instead of
+          // re-gating navigation behind sequential Continue clicks.
+          setFurthestStep(STEP_LABELS.length);
         } else if (sessionStorage.getItem(ONBOARDING_DISMISS_KEY) !== "1") {
           setShowOnboarding(true);
         }
@@ -624,30 +627,11 @@ export default function CreateProfilePage() {
                     }`}
                   >
                     {(form.profilePicture || form.profilePictureUrl) ? (
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        aria-label="Drag to reposition, or click to view full size"
-                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setProfilePhotoLightbox(true); } }}
-                        onPointerDown={(e) => {
-                          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-                          profileDragState.current = { startY: e.clientY, startPos: form.profilePicturePositionY, moved: false };
-                        }}
-                        onPointerMove={(e) => {
-                          if (!profileDragState.current) return;
-                          const deltaY = e.clientY - profileDragState.current.startY;
-                          if (Math.abs(deltaY) > 4) profileDragState.current.moved = true;
-                          if (!profileDragState.current.moved) return;
-                          const containerHeight = e.currentTarget.clientHeight || 1;
-                          const deltaPercent = (deltaY / containerHeight) * 100;
-                          const next = Math.min(100, Math.max(0, profileDragState.current.startPos - deltaPercent));
-                          update("profilePicturePositionY", next);
-                        }}
-                        onPointerUp={() => {
-                          if (profileDragState.current && !profileDragState.current.moved) setProfilePhotoLightbox(true);
-                          profileDragState.current = null;
-                        }}
-                        className="w-full h-full block cursor-move focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+                      <button
+                        type="button"
+                        aria-label="Click to zoom and reposition"
+                        onClick={() => setProfilePhotoLightbox(true)}
+                        className="w-full h-full block cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
@@ -657,7 +641,7 @@ export default function CreateProfilePage() {
                           className="w-full h-full object-cover pointer-events-none select-none"
                           style={{ objectPosition: `center ${form.profilePicturePositionY}%` }}
                         />
-                      </div>
+                      </button>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-[var(--color-text-secondary)]">
                         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -673,7 +657,7 @@ export default function CreateProfilePage() {
                         {form.profilePicture || form.profilePictureUrl ? "Change photo" : "Upload photo"}
                       </span>
                     </label>
-                    <p className="mt-1.5 text-xs text-[var(--color-text-secondary)]">JPG or PNG, up to 5MB. Drop a file onto the circle to upload, drag the photo itself to reposition, or click it to view full size.</p>
+                    <p className="mt-1.5 text-xs text-[var(--color-text-secondary)]">JPG or PNG, up to 5MB. Drop a file onto the circle to upload, or click it to zoom in and drag to reposition.</p>
                   </div>
                 </div>
               </div>
@@ -684,15 +668,33 @@ export default function CreateProfilePage() {
                     <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                   <div
-                    className="w-[min(85vw,85vh)] h-[min(85vw,85vh)] rounded-full overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => {
+                      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                      profileDragState.current = { startY: e.clientY, startPos: form.profilePicturePositionY, moved: false };
+                    }}
+                    onPointerMove={(e) => {
+                      if (!profileDragState.current) return;
+                      const deltaY = e.clientY - profileDragState.current.startY;
+                      if (Math.abs(deltaY) > 4) profileDragState.current.moved = true;
+                      if (!profileDragState.current.moved) return;
+                      const containerHeight = e.currentTarget.clientHeight || 1;
+                      const deltaPercent = (deltaY / containerHeight) * 100;
+                      const next = Math.min(100, Math.max(0, profileDragState.current.startPos - deltaPercent));
+                      update("profilePicturePositionY", next);
+                    }}
+                    onPointerUp={() => { profileDragState.current = null; }}
+                    className="relative w-[min(85vw,85vh)] h-[min(85vw,85vh)] rounded-full overflow-hidden cursor-move"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={form.profilePicture ? URL.createObjectURL(form.profilePicture) : form.profilePictureUrl}
                       alt="Profile"
-                      className="w-full h-full object-cover"
+                      draggable={false}
+                      className="w-full h-full object-cover pointer-events-none select-none"
+                      style={{ objectPosition: `center ${form.profilePicturePositionY}%` }}
                     />
+                    <span className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium text-white">Drag to reposition</span>
                   </div>
                 </div>
               )}
@@ -926,7 +928,11 @@ export default function CreateProfilePage() {
                     />
                   )}
                   <input type="file" accept="image/*" id="cover-input" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) update("coverBanner", f); }} />
-                  <label htmlFor="cover-input" className="absolute bottom-3 right-3 cursor-pointer rounded-full bg-black/60 px-3 py-1.5 text-xs font-semibold text-white hover:bg-black/75">
+                  <label
+                    htmlFor="cover-input"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="absolute bottom-3 right-3 cursor-pointer rounded-full bg-black/60 px-3 py-1.5 text-xs font-semibold text-white hover:bg-black/75"
+                  >
                     {form.coverBanner || form.coverBannerUrl ? "Change cover" : "+ Add cover photo"}
                   </label>
                   {(form.coverBanner || form.coverBannerUrl) && (
