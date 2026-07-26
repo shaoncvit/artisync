@@ -57,8 +57,15 @@ export default function SignupPage() {
       // This tab is the one that just opened a verification link — stay put
       // and show a confirmation instead of whisking it off to the dashboard,
       // since the original signup tab (which has the password fields) still
-      // needs to finish the flow.
-      if (router.query.verified === "1") { setCheckingSession(false); return; }
+      // needs to finish the flow. Read straight from the URL rather than
+      // router.query: on a hard navigation (which is exactly how the emailed
+      // link arrives), Next hasn't parsed the query string into router.query
+      // yet on this first render, so router.query.verified would read as
+      // undefined here and this branch would never trigger.
+      if (new URLSearchParams(window.location.search).get("verified") === "1") {
+        setCheckingSession(false);
+        return;
+      }
       const destination = await resolveEntryPath(session.user.id, role);
       const returnTo = typeof router.query.returnTo === "string" ? router.query.returnTo : undefined;
       if (returnTo && destination === "/artists") {
@@ -132,7 +139,7 @@ export default function SignupPage() {
     return <div className="min-h-screen" />;
   }
 
-  if (router.query.verified === "1") {
+  if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("verified") === "1") {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 text-center">
         <div className="max-w-sm">
