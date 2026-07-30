@@ -18,6 +18,7 @@ import Select from "@/components/Select";
 import TagInput from "@/components/TagInput";
 import Logo from "@/components/Logo";
 import DashboardLink from "@/components/DashboardLink";
+import { useToast } from "@/components/Toast";
 
 const ONBOARDING_DISMISS_KEY = "artisync_artist_onboarding_dismissed";
 
@@ -36,11 +37,16 @@ const INSTRUMENT_SUGGESTIONS = ["Guitar","Piano","Tabla","Violin","Flute","Drums
 
 const STEP_LABELS = ["Basic Info", "Art & Skills", "Portfolio", "Availability & Pricing", "Contact & Review"];
 
+const MAX_PORTFOLIO_IMAGES = 24;
+const MAX_VIDEOS = 10;
+const MAX_IMAGE_SIZE_MB = 5;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function getYouTubeId(url: string): string | null {
   if (!url) return null;
-  const m = url.match(/(?:youtu\.be\/|v=|embed\/)([A-Za-z0-9_-]{11})/);
+  const m = url.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
   return m ? m[1] : null;
 }
 
@@ -143,6 +149,7 @@ const EMPTY_FORM: FormState = {
 
 export default function CreateProfilePage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [userId, setUserId] = useState<string | null>(null);
   const [profileSaved, setProfileSaved] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(true);
@@ -319,6 +326,14 @@ export default function CreateProfilePage() {
     setDirty(true);
   }
 
+  function acceptImageFile(file: File): boolean {
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      showToast(`That image is over the ${MAX_IMAGE_SIZE_MB}MB limit.`, "error");
+      return false;
+    }
+    return true;
+  }
+
   // ── Upload helper (unchanged logic/paths) ─────────────────────────────────
   async function uploadFile(file: File, path: string): Promise<string> {
     const { error: uploadError } = await supabase.storage.from(ARTIST_MEDIA_BUCKET).upload(path, file, { upsert: true });
@@ -330,9 +345,14 @@ export default function CreateProfilePage() {
   function addPortfolioFiles(files: File[]) {
     const images = files.filter((f) => f.type.startsWith("image/"));
     if (!images.length) return;
-    const remaining = 12 - portfolioItems.length;
+    const oversized = images.filter((f) => f.size > MAX_IMAGE_SIZE_BYTES);
+    const withinSize = images.filter((f) => f.size <= MAX_IMAGE_SIZE_BYTES);
+    if (oversized.length) {
+      showToast(`${oversized.length} photo${oversized.length > 1 ? "s" : ""} skipped — over the ${MAX_IMAGE_SIZE_MB}MB limit.`, "error");
+    }
+    const remaining = MAX_PORTFOLIO_IMAGES - portfolioItems.length;
     if (remaining <= 0) return;
-    const toAdd = images.slice(0, remaining);
+    const toAdd = withinSize.slice(0, remaining);
     setPortfolioItems((prev) => [
       ...prev,
       ...toAdd.map((file, i) => ({
@@ -620,7 +640,7 @@ export default function CreateProfilePage() {
                       e.preventDefault();
                       setProfileDragOver(false);
                       const f = e.dataTransfer.files?.[0];
-                      if (f && f.type.startsWith("image/")) update("profilePicture", f);
+                      if (f && f.type.startsWith("image/") && acceptImageFile(f)) update("profilePicture", f);
                     }}
                     className={`relative w-20 h-20 rounded-full border-2 bg-[var(--color-surface)] overflow-hidden flex-shrink-0 transition-colors ${
                       profileDragOver ? "border-[var(--color-accent)] border-dashed" : "border-[var(--color-border)]"
@@ -651,13 +671,13 @@ export default function CreateProfilePage() {
                     )}
                   </div>
                   <div>
-                    <input type="file" accept="image/*" id="pic-input" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) update("profilePicture", f); }} />
+                    <input type="file" accept="image/*" id="pic-input" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f && acceptImageFile(f)) update("profilePicture", f); }} />
                     <label htmlFor="pic-input">
                       <span className="inline-flex cursor-pointer items-center rounded-[var(--radius-md)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold hover:bg-[var(--color-primary-soft)]">
                         {form.profilePicture || form.profilePictureUrl ? "Change photo" : "Upload photo"}
                       </span>
                     </label>
-                    <p className="mt-1.5 text-xs text-[var(--color-text-secondary)]">JPG or PNG, up to 5MB. Drop a file onto the circle to upload, or click it to zoom in and drag to reposition.</p>
+                    <p className="mt-1.5 text-xs text-[var(--color-text-secondary)]">Square photo, at least 500×500px. JPG or PNG, up to {MAX_IMAGE_SIZE_MB}MB. Drop a file onto the circle to upload, or click it to zoom in and drag to reposition.</p>
                   </div>
                 </div>
               </div>
@@ -897,7 +917,7 @@ export default function CreateProfilePage() {
                     e.preventDefault();
                     setCoverDragOver(false);
                     const f = e.dataTransfer.files?.[0];
-                    if (f && f.type.startsWith("image/")) update("coverBanner", f);
+                    if (f && f.type.startsWith("image/") && acceptImageFile(f)) update("coverBanner", f);
                   }}
                   onPointerDown={(e) => {
                     if (!(form.coverBanner || form.coverBannerUrl)) return;
@@ -927,7 +947,7 @@ export default function CreateProfilePage() {
                       style={{ objectPosition: `center ${form.coverBannerPositionY}%` }}
                     />
                   )}
-                  <input type="file" accept="image/*" id="cover-input" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) update("coverBanner", f); }} />
+                  <input type="file" accept="image/*" id="cover-input" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f && acceptImageFile(f)) update("coverBanner", f); }} />
                   <label
                     htmlFor="cover-input"
                     onPointerDown={(e) => e.stopPropagation()}
@@ -941,15 +961,15 @@ export default function CreateProfilePage() {
                     </span>
                   )}
                 </div>
-                <p className="mt-1.5 text-xs text-[var(--color-text-secondary)]">Drag and drop an image here, or drag the photo itself up/down to adjust what&apos;s visible.</p>
+                <p className="mt-1.5 text-xs text-[var(--color-text-secondary)]">Recommended 1200×400px (3:1 wide). JPG or PNG, up to {MAX_IMAGE_SIZE_MB}MB. Drag and drop an image here, or drag the photo itself up/down to adjust what&apos;s visible.</p>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <FieldLabel optional>Performance photographs</FieldLabel>
-                  <span className="text-xs text-[var(--color-text-secondary)]">{totalImages}/12</span>
+                  <span className="text-xs text-[var(--color-text-secondary)]">{totalImages}/{MAX_PORTFOLIO_IMAGES}</span>
                 </div>
-                <p className="mb-3 text-xs text-[var(--color-text-secondary)]">JPG or PNG, up to 5MB each. Drag and drop to upload, or drag a photo onto another to reorder.</p>
+                <p className="mb-3 text-xs text-[var(--color-text-secondary)]">Square or landscape, at least 800px on the shortest side. JPG or PNG, up to {MAX_IMAGE_SIZE_MB}MB each. Drag and drop to upload, or drag a photo onto another to reorder.</p>
                 <input ref={perfInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePerfImagesAdd} />
 
                 {totalImages === 0 ? (
@@ -1012,7 +1032,7 @@ export default function CreateProfilePage() {
                           className="w-full text-xs bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-sm)] px-2 py-1.5" />
                       </div>
                     ))}
-                    {totalImages < 12 && (
+                    {totalImages < MAX_PORTFOLIO_IMAGES && (
                       <button type="button" onClick={() => perfInputRef.current?.click()}
                         className="aspect-square rounded-[var(--radius-md)] border-2 border-dashed border-[var(--color-border)] hover:border-[var(--color-accent)] flex flex-col items-center justify-center gap-1 text-[var(--color-text-secondary)] transition-all">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
@@ -1031,7 +1051,7 @@ export default function CreateProfilePage() {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <FieldLabel optional>Video links (YouTube preferred)</FieldLabel>
-                  {form.youtubeVideos.length < 6 && (
+                  {form.youtubeVideos.length < MAX_VIDEOS && (
                     <button type="button" onClick={() => {
                       update("youtubeVideos", [...form.youtubeVideos, ""]);
                       update("youtubeVideoCaptions", [...form.youtubeVideoCaptions, ""]);
@@ -1065,19 +1085,18 @@ export default function CreateProfilePage() {
                             className="flex-1 text-sm bg-transparent border-none outline-none" />
                           {valid && <span className="text-xs text-[var(--color-success)] font-medium flex-shrink-0">✓ valid</span>}
                           {!valid && url && <span className="text-xs text-[var(--color-error)] flex-shrink-0">invalid</span>}
-                          {form.youtubeVideos.length > 1 && (
-                            <button type="button" onClick={() => {
-                              update("youtubeVideos", form.youtubeVideos.filter((_, j) => j !== i));
-                              update("youtubeVideoCaptions", form.youtubeVideoCaptions.filter((_, j) => j !== i));
-                              update("videoThumbnails", form.videoThumbnails.filter((_, j) => j !== i));
-                              if (videoThumbnailPreviews[i]) URL.revokeObjectURL(videoThumbnailPreviews[i]);
-                              setVideoThumbnailFiles((p) => p.filter((_, j) => j !== i));
-                              setVideoThumbnailPreviews((p) => p.filter((_, j) => j !== i));
-                            }}
-                              className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] flex-shrink-0">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                          )}
+                          <button type="button" onClick={() => {
+                            update("youtubeVideos", form.youtubeVideos.filter((_, j) => j !== i));
+                            update("youtubeVideoCaptions", form.youtubeVideoCaptions.filter((_, j) => j !== i));
+                            update("videoThumbnails", form.videoThumbnails.filter((_, j) => j !== i));
+                            if (videoThumbnailPreviews[i]) URL.revokeObjectURL(videoThumbnailPreviews[i]);
+                            setVideoThumbnailFiles((p) => p.filter((_, j) => j !== i));
+                            setVideoThumbnailPreviews((p) => p.filter((_, j) => j !== i));
+                          }}
+                            aria-label="Remove video"
+                            className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] flex-shrink-0">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
                         </div>
                         <div className="px-4 pb-3 border-t border-[var(--color-border)] pt-2">
                           <input type="text" placeholder="Caption for this video (optional)" value={form.youtubeVideoCaptions[i] ?? ""}
@@ -1104,7 +1123,7 @@ export default function CreateProfilePage() {
                                   className="hidden"
                                   onChange={(e) => {
                                     const file = e.target.files?.[0];
-                                    if (!file) return;
+                                    if (!file || !acceptImageFile(file)) return;
                                     setVideoThumbnailFiles((p) => { const next = [...p]; next[i] = file; return next; });
                                     setVideoThumbnailPreviews((p) => { const next = [...p]; next[i] = URL.createObjectURL(file); return next; });
                                     setDirty(true);
@@ -1112,7 +1131,7 @@ export default function CreateProfilePage() {
                                 />
                                 {(videoThumbnailPreviews[i] || form.videoThumbnails[i]) ? "Change thumbnail" : "Add a thumbnail"}
                               </label>
-                              <p className="mt-1 text-[10px] text-[var(--color-text-secondary)]">Instagram links can&apos;t auto-fetch a thumbnail — upload one so this looks as good as a YouTube video.</p>
+                              <p className="mt-1 text-[10px] text-[var(--color-text-secondary)]">Instagram links can&apos;t auto-fetch a thumbnail — upload one so this looks as good as a YouTube video. Landscape 1280×720px (16:9) works best, up to {MAX_IMAGE_SIZE_MB}MB.</p>
                             </div>
                           </div>
                         )}

@@ -2,7 +2,7 @@ import type { ArtistProfile } from "./supabaseClient";
 import { SITE_URL } from "./siteConfig";
 import { getYouTubeThumbnail } from "./youtube";
 
-const MUSIC_CATEGORIES = ["Musician", "Singer", "DJ"];
+const MUSIC_CATEGORIES = ["Musician", "Singer", "DJ", "Music Band"];
 
 /**
  * Builds a schema.org ProfilePage graph for a public artist profile, using

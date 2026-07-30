@@ -12,6 +12,7 @@
 // category's list of specializations/sub-forms.
 export const ART_FORMS: Record<string, string[]> = {
   Musician: ["Guitarist","Bassist","Drummer","Pianist / Keyboardist","Violinist","Flutist","Tabla Player","Sitar Player","Harmonium Player","Trumpet / Brass Player","Saxophone Player","Percussionist","Sarangi Player","Mandolin Player","Veena Player","Mridangam Player","Shehnai Player","Santoor Player"],
+  "Music Band": ["Wedding Band","Cover Band","Live Band","Rock Band","Jazz Band","Fusion Band","Folk Band","Bollywood Band","Brass Band","Acoustic Band","Party Band"],
   Singer: ["Hindustani Classical Vocalist","Carnatic Classical Vocalist","Semi-Classical Singer","Ghazal Singer","Bollywood Singer","Pop Singer","Folk Singer","Devotional / Bhajan Singer","Jazz Singer","R&B / Soul Singer","Rock Singer","Sufi Singer","Qawwali Singer","Indie Singer-Songwriter"],
   Dancer: ["Bharatanatyam","Kathak","Odissi","Kuchipudi","Manipuri","Mohiniyattam","Sattriya","Classical Ballet","Contemporary","Hip Hop / B-boy","Salsa / Latin","Bollywood Dance","Folk Dance","Flamenco","Tap Dance","Jazz Dance","Freestyle"],
   "Actor / Theatre": ["Theatre Actor","Street Theatre","Mime Artist","Film Actor","TV / OTT Actor","Puppeteer","Physical Theatre"],
@@ -34,6 +35,7 @@ export const ARTIST_CATEGORIES = Object.keys(ART_FORMS);
 // legacy/unrecognized value stored on an older profile.
 const CATEGORY_PLURALS: Record<string, string> = {
   Musician: "Musicians",
+  "Music Band": "Music Bands",
   Singer: "Singers",
   Dancer: "Dancers",
   "Actor / Theatre": "Actors & Theatre Artists",
@@ -57,6 +59,7 @@ export function pluralizeCategory(category: string): string {
 // never as a stored value, so matching logic elsewhere stays unambiguous.
 export const CATEGORY_ALIASES: Record<string, string> = {
   music: "Musician", musicians: "Musician",
+  band: "Music Band", bands: "Music Band", "music-band": "Music Band", "music-bands": "Music Band",
   singers: "Singer", singing: "Singer", vocalist: "Singer", vocalists: "Singer",
   dance: "Dancer", dancers: "Dancer", dancing: "Dancer",
   actors: "Actor / Theatre", theatre: "Actor / Theatre", theater: "Actor / Theatre", acting: "Actor / Theatre",
