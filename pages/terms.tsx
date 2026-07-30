@@ -17,11 +17,6 @@ export default function TermsPage() {
       </Head>
       <AppHeader />
       <Container className="py-14 sm:py-20 flex-1 max-w-2xl">
-        <div className="mb-8 rounded-[var(--radius-md)] border border-[var(--color-warning)] bg-[var(--color-warning-soft)] p-4 text-sm text-[var(--color-text)]">
-          <strong>Draft — not yet legally reviewed.</strong> This describes how the product actually
-          works today. It has not been reviewed by a lawyer and should not be treated as a finished,
-          binding agreement until it has been.
-        </div>
         <h1 className="text-3xl">{title}</h1>
         <div className="mt-6 space-y-6 text-[var(--color-text-secondary)] leading-relaxed">
           <section>
