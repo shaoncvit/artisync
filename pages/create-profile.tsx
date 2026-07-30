@@ -1014,11 +1014,11 @@ export default function CreateProfilePage() {
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={item.kind === "saved" ? item.url : item.previewUrl} alt="" draggable={false} className="w-full h-full object-cover pointer-events-none" />
                           {item.kind === "new" && <span className="absolute bottom-1 left-1 text-[10px] text-white bg-blue-500/80 px-1.5 py-0.5 rounded">new</span>}
-                          <button type="button" onClick={() => removePortfolioItem(item.id)}
-                            className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button type="button" onClick={() => removePortfolioItem(item.id)} aria-label="Remove photo"
+                            className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                           </button>
-                          <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="absolute bottom-1 right-1 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                             <button type="button" disabled={i === 0} onClick={() => movePortfolioItem(i, -1)} className="w-6 h-6 bg-black/60 disabled:opacity-30 text-white rounded-full flex items-center justify-center">
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                             </button>
