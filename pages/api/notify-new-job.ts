@@ -50,6 +50,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     )
   );
+  const failures: string[] = [];
+  results.forEach((r, i) => {
+    if (r.status === "rejected") {
+      const reason = r.reason instanceof Error ? r.reason.message : String(r.reason);
+      console.error(`notify-new-job: failed to email ${recipients[i]?.email}:`, reason);
+      failures.push(`${recipients[i]?.email}: ${reason}`);
+    }
+  });
   const notified = results.filter((r) => r.status === "fulfilled").length;
-  return res.status(200).json({ notified, total: recipients.length });
+  return res.status(200).json({ notified, total: recipients.length, failures });
 }

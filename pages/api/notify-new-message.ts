@@ -33,17 +33,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (error) return res.status(500).json({ error: error.message });
 
   const target = Array.isArray(targets) ? targets[0] : targets;
-  if (!target) return res.status(200).json({ notified: false });
+  if (!target) return res.status(200).json({ notified: false, reason: "no target returned by get_message_email_target" });
 
-  await sendEmail({
-    to: target.to_email,
-    subject: `New message from ${target.from_name} on ${SITE_NAME}`,
-    html: `
-      <p>Hi ${target.to_name},</p>
-      <p><strong>${target.from_name}</strong> just sent you a message on ${SITE_NAME}.</p>
-      <p><a href="${SITE_URL}/conversation/${conversationId}">Read and reply</a></p>
-    `,
-  });
+  try {
+    await sendEmail({
+      to: target.to_email,
+      subject: `New message from ${target.from_name} on ${SITE_NAME}`,
+      html: `
+        <p>Hi ${target.to_name},</p>
+        <p><strong>${target.from_name}</strong> just sent you a message on ${SITE_NAME}.</p>
+        <p><a href="${SITE_URL}/conversation/${conversationId}">Read and reply</a></p>
+      `,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`notify-new-message: failed to email ${target.to_email}:`, message);
+    return res.status(200).json({ notified: false, error: message });
+  }
 
   return res.status(200).json({ notified: true });
 }
