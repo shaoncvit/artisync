@@ -20,7 +20,7 @@ export function notifyNewJobPosted(jobId: string) {
   void authedFetch("/api/notify-new-job", { jobId });
 }
 
-/** Best-effort — emails the artist if this was the first message in the conversation. */
+/** Best-effort — emails whichever side of the conversation didn't send this message. */
 export function notifyNewMessage(conversationId: string, messageId: string) {
   void authedFetch("/api/notify-new-message", { conversationId, messageId });
 }

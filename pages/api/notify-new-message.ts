@@ -4,12 +4,10 @@ import { sendEmail } from "@/lib/email";
 import { SITE_URL, SITE_NAME } from "@/lib/siteConfig";
 
 /**
- * Emails the artist when a client messages them for the first time in a
- * conversation. get_first_message_email_target() only returns a target
- * when the conversation has exactly one message and the client sent it —
- * every later message in the same thread is a no-op here, so this never
- * re-notifies. Called (best-effort, never blocking) right after a
- * message insert succeeds in components/ChatThread.tsx.
+ * Emails whichever side of a conversation didn't send this message —
+ * every message, either direction (client -> artist or artist -> client).
+ * Called (best-effort, never blocking) right after a message insert
+ * succeeds in components/ChatThread.tsx.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -28,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const supabase = createClient(url, anonKey, { global: { headers: { Authorization: `Bearer ${token}` } } });
 
-  const { data: targets, error } = await supabase.rpc("get_first_message_email_target", {
+  const { data: targets, error } = await supabase.rpc("get_message_email_target", {
     p_conversation_id: conversationId,
     p_message_id: messageId,
   });
