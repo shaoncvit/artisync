@@ -10,6 +10,8 @@ export type ClientProfile = {
   organizationName: string;
   bio: string;
   profilePictureUrl: string;
+  coverBannerUrl: string;
+  photoUrls: string[];
   createdAt: string;
 };
 
@@ -25,6 +27,8 @@ export function mapClientRow(d: any): ClientProfile {
     organizationName: d.organization_name ?? "",
     bio: d.bio ?? "",
     profilePictureUrl: d.profile_picture_url ?? "",
+    coverBannerUrl: d.cover_banner_url ?? "",
+    photoUrls: d.photo_urls ?? [],
     createdAt: d.created_at ?? "",
   };
 }
@@ -41,7 +45,17 @@ export async function getPublicClientProfile(clientId: string) {
 
 export async function updateClientProfile(
   userId: string,
-  fields: { fullName: string; phone: string; state: string; city: string; organizationName: string; bio: string; profilePictureUrl: string }
+  fields: {
+    fullName: string;
+    phone: string;
+    state: string;
+    city: string;
+    organizationName: string;
+    bio: string;
+    profilePictureUrl: string;
+    coverBannerUrl: string;
+    photoUrls: string[];
+  }
 ) {
   return supabase
     .from("clients")
@@ -53,15 +67,29 @@ export async function updateClientProfile(
       organization_name: fields.organizationName,
       bio: fields.bio,
       profile_picture_url: fields.profilePictureUrl,
+      cover_banner_url: fields.coverBannerUrl,
+      photo_urls: fields.photoUrls,
     })
     .eq("id", userId);
 }
 
-export async function uploadClientProfilePicture(userId: string, file: File): Promise<string> {
+async function uploadClientMedia(userId: string, file: File, prefix: string): Promise<string> {
   const ext = file.name.split(".").pop() || "jpg";
-  const path = `${userId}/client-profile-${Date.now()}.${ext}`;
+  const path = `${userId}/${prefix}-${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from(ARTIST_MEDIA_BUCKET).upload(path, file, { upsert: true });
   if (error) throw error;
   const { data } = supabase.storage.from(ARTIST_MEDIA_BUCKET).getPublicUrl(path);
   return data.publicUrl;
+}
+
+export async function uploadClientProfilePicture(userId: string, file: File): Promise<string> {
+  return uploadClientMedia(userId, file, "client-profile");
+}
+
+export async function uploadClientCoverBanner(userId: string, file: File): Promise<string> {
+  return uploadClientMedia(userId, file, "client-cover");
+}
+
+export async function uploadClientPhoto(userId: string, file: File): Promise<string> {
+  return uploadClientMedia(userId, file, "client-photo");
 }
