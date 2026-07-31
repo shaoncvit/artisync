@@ -1,6 +1,11 @@
 export function getYouTubeId(url: string): string | null {
   if (!url) return null;
-  const m = url.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
+  // Negative lookahead on "embed/" excludes playlist embeds
+  // (youtube.com/embed/videoseries?list=...) — "videoseries" happens to be
+  // exactly 11 characters, the same length as a real video ID, so without
+  // it this would extract "videoseries" as a fake ID and build a broken
+  // embed URL with no list param.
+  const m = url.match(/(?:youtu\.be\/|v=|embed\/(?!videoseries)|shorts\/)([A-Za-z0-9_-]{11})/);
   return m ? m[1] : null;
 }
 

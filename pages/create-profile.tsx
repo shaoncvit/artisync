@@ -46,7 +46,7 @@ const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 
 function getYouTubeId(url: string): string | null {
   if (!url) return null;
-  const m = url.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
+  const m = url.match(/(?:youtu\.be\/|v=|embed\/(?!videoseries)|shorts\/)([A-Za-z0-9_-]{11})/);
   return m ? m[1] : null;
 }
 
