@@ -8,6 +8,7 @@ import {
   type MessageRow,
   type ContactShareRequestRow,
 } from "@/lib/conversations";
+import { notifyNewMessage } from "@/lib/notifyEmail";
 import { useChat } from "@/components/ChatContext";
 import Button from "@/components/Button";
 import Textarea from "@/components/Textarea";
@@ -187,6 +188,7 @@ export default function ChatThread({
       // realtime listener below dedupes by id so this never double-adds.
       if (inserted) {
         setMessages((prev) => (prev.some((m) => m.id === inserted.id) ? prev : [...prev, inserted as MessageRow]));
+        notifyNewMessage(conversation.id, inserted.id);
       }
       setBody("");
       setFile(null);

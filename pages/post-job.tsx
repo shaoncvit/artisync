@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { stripOAuthHashIfPresent } from "@/lib/stripOAuthHash";
 import { ARTIST_CATEGORIES, EVENT_TYPES, INDIA_STATES } from "@/lib/sharedConfig";
 import { postJob } from "@/lib/jobs";
+import { notifyNewJobPosted } from "@/lib/notifyEmail";
 import Container from "@/components/Container";
 import Logo from "@/components/Logo";
 import Button from "@/components/Button";
@@ -78,6 +79,7 @@ export default function PostJobPage() {
     });
     setSaving(false);
     if (postError) { setError(postError.message); return; }
+    if (data?.id) notifyNewJobPosted(data.id);
     router.push(data?.id ? `/my-jobs?posted=${data.id}` : "/my-jobs");
   }
 
