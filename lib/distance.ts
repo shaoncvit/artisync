@@ -17,7 +17,7 @@ export function haversineDistanceKm(a: Coordinates, b: Coordinates): number {
 
 /** Human-friendly distance label — never shows raw coordinates. */
 export function formatDistance(km: number): string {
-  if (km < 2) return "Nearby";
+  if (km < 2) return "Within 2 km";
   if (km < 999) return `~${Math.round(km)} km away`;
   return "Far away";
 }

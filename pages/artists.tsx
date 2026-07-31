@@ -82,7 +82,10 @@ function ArtistCard({ entry, clientId, personalized }: { entry: ArtistEntry; cli
         <div className="flex items-center justify-between mt-2 gap-1">
           {locationParts.length ? (
             <span className="text-xs text-[var(--color-text-secondary)] truncate">
-              {locationParts.join(", ")}{distanceKm != null && ` · ${formatDistance(distanceKm)}`}
+              {locationParts.join(", ")}
+              {distanceKm != null && (
+                <span className="text-[var(--color-accent)] font-semibold"> · {formatDistance(distanceKm)}</span>
+              )}
             </span>
           ) : <span />}
           <span className="text-xs font-bold text-[var(--color-text)] flex-shrink-0">{data.priceRange ? `₹${data.priceRange}` : "Contact for Price"}</span>
@@ -132,6 +135,7 @@ export default function ArtistsPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [refPoint, setRefPoint] = useState<Coordinates | null>(null);
   const [locatingMe, setLocatingMe] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   // Auth + preferences
   useEffect(() => {
@@ -159,15 +163,36 @@ export default function ArtistsPage() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // "Use my location" — never stored, only used in-session to compute distance.
+  // "Search Nearby" — location is never stored, only used in-session to compute distance.
   function useMyLocation() {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setLocationError("Your browser doesn't support location search.");
+      return;
+    }
     setLocatingMe(true);
+    setLocationError(null);
     navigator.geolocation.getCurrentPosition(
-      (pos) => { setRefPoint({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setLocatingMe(false); },
-      () => setLocatingMe(false),
+      (pos) => {
+        setRefPoint({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocatingMe(false);
+        setQuery({ sort: "distance" });
+      },
+      (err) => {
+        setLocatingMe(false);
+        setLocationError(
+          err.code === err.PERMISSION_DENIED
+            ? "Location access was denied — enable it in your browser settings to search nearby."
+            : "Couldn't get your location. Please try again."
+        );
+      },
       { timeout: 10000 }
     );
+  }
+
+  function clearNearbySearch() {
+    setRefPoint(null);
+    setLocationError(null);
+    if (router.query.sort === "distance") setQuery({ sort: undefined });
   }
 
   // Artists
@@ -219,7 +244,7 @@ export default function ArtistsPage() {
   const sort = (qToStr(router.query.sort) || (preferences ? "best" : "name")) as SortKey;
 
   // If the visitor picks a city filter and we don't already have a reference
-  // point (from saved preferences or "Use my location"), geocode that city
+  // point (from saved preferences or "Search Nearby"), geocode that city
   // so distance sort/labels work for logged-out browsing too.
   useEffect(() => {
     if (refPoint || !cityFilter) return;
@@ -473,6 +498,29 @@ export default function ArtistsPage() {
           </div>
         )}
 
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3.5">
+          <div className="flex items-center gap-2.5 flex-1 min-w-[220px]">
+            <svg className="w-5 h-5 text-[var(--color-accent)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+            </svg>
+            <p className="text-sm text-[var(--color-text)] font-medium">
+              {refPoint ? "Showing how far each artist is from you." : "See which artists are closest to you first."}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button type="button" variant={refPoint ? "outline" : "primary"} size="md" onClick={useMyLocation} disabled={locatingMe} className="whitespace-nowrap">
+              {locatingMe ? "Locating…" : refPoint ? "Search again" : "Search Nearby"}
+            </Button>
+            {refPoint && (
+              <button type="button" onClick={clearNearbySearch} className="text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)] whitespace-nowrap">
+                Clear
+              </button>
+            )}
+          </div>
+          {locationError && <p className="w-full text-xs text-[var(--color-error)]">{locationError}</p>}
+        </div>
+
         <div className="mt-6 grid lg:grid-cols-[240px_1fr] gap-8">
           {/* Desktop filter sidebar */}
           <aside className="hidden lg:block">
@@ -508,9 +556,6 @@ export default function ArtistsPage() {
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
                 <p className="text-sm text-[var(--color-text-secondary)]">{loadingArtists ? "Loading…" : `${sorted.length} artist${sorted.length !== 1 ? "s" : ""}`}</p>
-                <button type="button" onClick={useMyLocation} disabled={locatingMe} className="text-xs font-semibold text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] whitespace-nowrap">
-                  {locatingMe ? "Locating…" : "Use my location"}
-                </button>
                 <select value={sort} onChange={(e) => setQuery({ sort: e.target.value })} className="h-9 px-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm">
                   {personalized && <option value="best">Best Match</option>}
                   {refPoint && <option value="distance">Nearest First</option>}
